@@ -1520,6 +1520,88 @@ Public Class Package
                 "G41Fun.HQDeringmod", "G41Fun.LSFmod", "G41Fun.SeeSaw", "G41Fun.MaskedDHA"}})
 
         Add(New PluginPackage With {
+            .Name = "kagefunc",
+            .Filename = "kagefunc.py",
+            .Location = "Plugins\VS\Scripts",
+            .WebURL = "https://github.com/Irrational-Encoding-Wizardry/kagefunc",
+            .Description = "A collection of Vapoursynth functions. kagefunc.py is the only relevant file for users",
+            .VSFilterNames = {"kagefunc.inverse_scale", "kagefunc._descale_luma", "kagefunc._descale_chroma", "kagefunc.mask_descale",
+            "kagefunc._generate_descale_mask", "kagefunc.generate_keyframes", "kagefunc.adaptive_grain",
+            "kagefunc.conditional_resize", "kagefunc.squaremask", "kagefunc.retinex_edgemask", "kagefunc.kirsch",
+            "kagefunc.get_descale_filter", "kagefunc.hardsubmask", "kagefunc.hardsubmask_fades", "kagefunc.crossfade",
+            "kagefunc.hybriddenoise", "kagefunc.getw"}})
+
+        Add(New PluginPackage With {
+            .Name = "AddGrain",
+            .Filename = "AddGrain.dll",
+            .Location = "Plugins\VS\AddGrain",
+            .Description = "AddGrain filter for VapourSynth",
+            .WebURL = "https://github.com/HomeOfVapourSynthEvolution/VapourSynth-AddGrain",
+            .VSFilterNames = {"grain.Add"}})
+
+        Add(New PluginPackage With {
+            .Name = "BilateralGPU",
+            .Filename = "bilateralGPU.dll",
+            .Location = "Plugins\VS\BilateralGPU",
+            .Description = "Bilateral filter for VapourSynth based on the OpenCV-CUDA library.",
+            .WebURL = "https://github.com/WolframRhodium/VapourSynth-BilateralGPU",
+            .VSFilterNames = {"bilateralgpu.Bilateral"}})
+
+        Add(New PluginPackage With {
+            .Name = "Bilateral",
+            .Filename = "Bilateral.dll",
+            .Location = "Plugins\VS\Bilateral",
+            .Description = "Bilateral filter for VapourSynth.",
+            .WebURL = "https://github.com/HomeOfVapourSynthEvolution/VapourSynth-Bilateral",
+            .VSFilterNames = {"bilateral.Bilateral", "bilateral.Gaussian"}})
+
+        Add(New PluginPackage With {
+            .Name = "libdescale",
+            .Filename = "libdescale.dll",
+            .Location = "Plugins\VS\Descale",
+            .Description = "VapourSynth plugin to undo upscaling",
+            .WebURL = "https://github.com/Irrational-Encoding-Wizardry/vapoursynth-descale",
+            .VSFilterNames = {"descale.Debilinear", "descale.Debicubic", "descale.Delanczos", "descale.Despline16",
+            "descale.Despline36", "descale.Despline64"}})
+
+        Add(New PluginPackage With {
+            .Name = "Descale",
+            .Filename = "descale.py",
+            .Location = "Plugins\VS\Descale",
+            .Description = "VapourSynth plugin to undo upscaling",
+            .WebURL = "https://github.com/Irrational-Encoding-Wizardry/vapoursynth-descale",
+            .VSFilterNames = {"descale.Debilinear", "descale.Debicubic", "descale.Delanczos", "descale.Despline16",
+            "descale.Despline36", "descale.Despline64"}})
+
+        Add(New PluginPackage With {
+            .Name = "Retinex",
+            .Filename = "Retinex.dll",
+            .WebURL = "https://github.com/HomeOfVapourSynthEvolution/VapourSynth-Retinex",
+            .Description = "Retinex algorithm for VapourSynth",
+            .VSFilterNames = {"retinex.MSRCP", "retinex.MSRCR"}})
+
+        Add(New PluginPackage With {
+            .Name = "VSFilter",
+            .Filename = "VSFilter.dll",
+            .WebURL = "https://github.com/HomeOfVapourSynthEvolution/VSFilter",
+            .Description = "VSFilter with VapourSynth interface added, based on the source of MPC-BE",
+            .VSFilterNames = {"vsf.TextSub", "vsf.VobSub"}})
+
+        Add(New PluginPackage With {
+            .Name = "VSFilterMod",
+            .Filename = "VSFilterMod.dll",
+            .WebURL = "https://github.com/sorayuki/VSFilterMod",
+            .Description = "VSFilterMod with VapourSynth interface added",
+            .VSFilterNames = {"vsfm.TextSubMod", "vsfm.VobSub"}})
+
+        Add(New PluginPackage With {
+            .Name = "median",
+            .Filename = "libmedian.dll",
+            .Description = "Median generates a pixel-by-pixel median of several clips.",
+            .WebURL = "https://github.com/dubhater/vapoursynth-median",
+            .VSFilterNames = {"median.Median"}})
+
+        Add(New PluginPackage With {
             .Name = "fvsfunc",
             .Filename = "fvsfunc.py",
             .Description = "Small collection of VapourSynth functions",
