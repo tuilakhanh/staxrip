@@ -1648,6 +1648,13 @@ Public Class Package
             .VSFilterNames = {"vsfm.TextSubMod", "vsfm.VobSub"}})
 
         Add(New PluginPackage With {
+            .Name = "adaptivegrain",
+            .Filename = "adaptivegrain_rs.dll",
+            .WebURL = "https://git.kageru.moe/kageru/adaptivegrain",
+            .Description = "Reimplementation of the adaptive_grain mask as a Vapoursynth plugin",
+            .VSFilterNames = {"adg.Mask"}})
+
+        Add(New PluginPackage With {
             .Name = "median",
             .Filename = "libmedian.dll",
             .Description = "Median generates a pixel-by-pixel median of several clips.",
