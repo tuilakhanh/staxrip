@@ -1567,7 +1567,7 @@ Public Class Package
         Add(New PluginPackage With {
             .Name = "Descale",
             .Filename = "descale.py",
-            .Location = "Plugins\VS\Descale",
+            .Location = "Plugins\VS\Scripts",
             .Description = "VapourSynth plugin to undo upscaling",
             .WebURL = "https://github.com/Irrational-Encoding-Wizardry/vapoursynth-descale",
             .VSFilterNames = {"descale.Debilinear", "descale.Debicubic", "descale.Delanczos", "descale.Despline16",
@@ -1615,6 +1615,30 @@ Public Class Package
             .Location = "Plugins\VS\Scripts",
             .WebURL = "https://github.com/Irrational-Encoding-Wizardry/fvsfunc",
             .VSFilterNames = {"fvsfunc.GradFun3mod", "fvsfunc.DescaleM", "fvsfunc.Downscale444", "fvsfunc.JIVTC", "fvsfunc.OverlayInter", "fvsfunc.AutoDeblock", "fvsfunc.ReplaceFrames", "fvsfunc.maa", "fvsfunc.TemporalDegrain", "fvsfunc.DescaleAA", "fvsfunc.InsertSign"}})
+
+        Add(New PluginPackage With {
+            .Name = "placebo",
+            .Filename = "placebo.py",
+            .Location = "Plugins\VS\Scripts",
+            .WebURL = "https://github.com/Ichunjo/vardefunc/blob/master/placebo.py",
+            .VSFilterNames = {"placebo.deband", "placebo.shader"}})
+
+        Add(New PluginPackage With {
+            .Name = "Vardefunc",
+            .Filename = "vardefunc.py",
+            .Location = "Plugins\VS\Scripts",
+            .WebURL = "https://github.com/Ichunjo/vardefunc",
+            .VSFilterNames = {"vardefunc.adaptative_regrain", "vardefunc.", "vardefunc.nnedi3cl_double", "vardefunc.nnedi3_upscale",
+            "vardefunc.fsrcnnx_upscale", "vardefunc.to_444", "vardefunc.diff_rescale_mask", "vardefunc.diff_creditless_mask",
+            "vardefunc.luma_credit_mask", "vardefunc.edge_detect", "vardefunc.region_mask", "vardefunc.fade_filter",
+            "vardefunc.merge_chroma", "vardefunc.get_chroma_shift", "vardefunc.get_bicubic_params", "vardefunc.generate_keyframes",
+            "vardefunc.set_ffms2_log_level"}})
+
+        Add(New PluginPackage With {
+            .Name = "cooldegrain",
+            .Filename = "cooldegrain.py",
+            .Location = "Plugins\VS\Scripts",
+            .VSFilterNames = {"cooldegrain.CoolDegrain"}})
 
         Add(New PluginPackage With {
             .Name = "nnedi3_rpow2",
