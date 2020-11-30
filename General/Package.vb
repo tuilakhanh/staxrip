@@ -1593,14 +1593,6 @@ Public Class Package
             .VSFilterNames = {"grain.Add"}})
 
         Add(New PluginPackage With {
-            .Name = "BilateralGPU",
-            .Filename = "bilateralGPU.dll",
-            .Location = "Plugins\VS\BilateralGPU",
-            .Description = "Bilateral filter for VapourSynth based on the OpenCV-CUDA library.",
-            .WebURL = "https://github.com/WolframRhodium/VapourSynth-BilateralGPU",
-            .VSFilterNames = {"bilateralgpu.Bilateral"}})
-
-        Add(New PluginPackage With {
             .Name = "Bilateral",
             .Filename = "Bilateral.dll",
             .Location = "Plugins\VS\Bilateral",
