@@ -1173,7 +1173,11 @@ Public Class MainForm
 
     Sub LoadSettings()
         Try
-            s = SafeSerialization.Deserialize(New ApplicationSettings, g.SettingsFile)
+            Using mutex As New Mutex(False, "staxrip settings file")
+                mutex.WaitOne()
+                s = SafeSerialization.Deserialize(New ApplicationSettings, g.SettingsFile)
+                mutex.ReleaseMutex()
+            End Using
         Catch ex As Exception
             Using td As New TaskDialog(Of String)
                 td.MainInstruction = "The settings failed to load!"
@@ -2855,7 +2859,7 @@ Public Class MainForm
                 End If
             End If
 
-            For Each ap In g.GetAudioProfiles
+            For Each ap In AudioProfile.GetProfiles
                 If ap.File = p.TargetFile Then
                     If ProcessTip("The audio source and target filepath is identical.") Then
                         g.Highlight(True, tbTargetFile)

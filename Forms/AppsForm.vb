@@ -389,7 +389,6 @@ Public Class AppsForm
         g.SetRenderer(ToolStrip)
 
         miEditChangelog.Visible = g.IsDevelopmentPC
-        miAutoUpdate.Visible = g.IsDevelopmentPC
 
         AddHandler SetupButton.Click, Sub()
                                           CurrentPackage.SetupAction.Invoke
@@ -444,7 +443,9 @@ Public Class AppsForm
         DownloadButton.Visible = CurrentPackage.DownloadURL <> "" AndAlso CurrentPackage.GetStatus <> ""
 
         tsbExplore.Enabled = path <> ""
-        tsbLaunch.Enabled = Not CurrentPackage.LaunchAction Is Nothing AndAlso CurrentPackage.GetStatus = ""
+        tsbLaunch.Enabled = Not CurrentPackage.LaunchAction Is Nothing AndAlso CurrentPackage.Path <> ""
+        miLaunch.Enabled = tsbLaunch.Enabled
+        miAutoUpdate.Enabled = CurrentPackage.DownloadURL <> ""
         tsbWebsite.Enabled = CurrentPackage.URL <> ""
         tsbDownload.Enabled = CurrentPackage.DownloadURL <> ""
 
@@ -581,13 +582,27 @@ Public Class AppsForm
 
         Dim files = TryCast(args.Data.GetData(DataFormats.FileDrop), String())
 
-        If Not files.NothingOrEmpty AndAlso files.Length = 1 AndAlso
-            files(0).Ext.EqualsAny("zip", "7z") Then
+        BeginInvoke(Sub()
+                        If Not files.NothingOrEmpty Then
+                            If files.Length = 1 AndAlso files(0).Ext.EqualsAny("zip", "7z") Then
 
-            ToolUpdate = New ToolUpdate(CurrentPackage, Me)
-            ToolUpdate.DownloadFile = files(0)
-            ToolUpdate.Extract()
-        End If
+                                ToolUpdate = New ToolUpdate(CurrentPackage, Me)
+                                ToolUpdate.DownloadFile = files(0)
+                                ToolUpdate.Extract()
+                            Else
+                                ToolUpdate = New ToolUpdate(CurrentPackage, Me)
+                                ToolUpdate.ExtractDir = Folder.Temp + Guid.NewGuid.ToString + "\"
+                                Directory.CreateDirectory(ToolUpdate.ExtractDir)
+
+                                For Each i In files
+                                    FileHelp.Copy(i, ToolUpdate.ExtractDir + i.FileName)
+                                Next
+
+                                ToolUpdate.DeleteOldFiles()
+                                FolderHelp.Delete(ToolUpdate.ExtractDir)
+                            End If
+                        End If
+                    End Sub)
     End Sub
 
     Sub tv_AfterSelect(sender As Object, e As TreeViewEventArgs) Handles tv.AfterSelect
@@ -701,7 +716,7 @@ Public Class AppsForm
         Dim input = InputBox.Show(msg, "StaxRip", CurrentPackage.Version)
 
         If input <> "" Then
-            CurrentPackage.SetVersion(input.Replace(";", "_"))
+            CurrentPackage.SetVersion(input.Replace(";", "_").Trim)
             ShowActivePackage()
             g.DefaultCommands.TestAndDynamicFileCreation()
         End If
@@ -930,8 +945,10 @@ Public Class AppsForm
             Exit Sub
         End If
 
-        ToolUpdate = New ToolUpdate(CurrentPackage, Me)
-        ToolUpdate.Update()
+        If MsgQuestion("Experimental feature not working for all tools, continue?") = DialogResult.OK Then
+            ToolUpdate = New ToolUpdate(CurrentPackage, Me)
+            ToolUpdate.Update()
+        End If
     End Sub
 
     Sub miEditChangelog_Click(sender As Object, e As EventArgs) Handles miEditChangelog.Click

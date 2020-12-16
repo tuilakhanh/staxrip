@@ -52,6 +52,7 @@ Public Class Package
         .WebURL = "https://github.com/dubhater/D2VWitch",
         .DownloadURL = "https://github.com/dubhater/D2VWitch/releases",
         .Location = "Support\D2V Witch",
+        .IsIncluded = False,
         .RequiredFunc = Function() CommandLineDemuxer.IsActive("%app:D2V Witch%"),
         .LaunchAction = Sub()
                             g.AddToPath(Package.d2vsourceVS.Directory)
@@ -479,12 +480,12 @@ Public Class Package
         .Name = "x265",
         .Location = "Encoders\x265",
         .Filename = "x265.exe",
-        .WebURL = "http://x265.org",
+        .WebURL = "https://github.com/msg7086/x265-Yuuki-Asuna",
         .HelpURL = "http://x265.readthedocs.org",
-        .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
+        .DownloadURL = "https://forum.doom9.org/showthread.php?p=1930644#post1930644",
         .HelpSwitch = "--log-level full --fullhelp",
         .HelpFilename = "x265 Help.txt",
-        .Description = "H.265 video encoding console app. Patman mod shows the estimated size in the status line."})
+        .Description = "H.265 video encoding console app. Yuuki-Asuna mod built by qyot27."})
 
     Shared Property SVTAV1 As Package = Add(New Package With {
         .Name = "SVT-AV1",
@@ -502,7 +503,7 @@ Public Class Package
         .Location = "Encoders\Rav1e",
         .Description = "AV1 Video Encoder.",
         .WebURL = "https://github.com/xiph/rav1e",
-        .HelpFilename = "rav1e help.txt",
+        .DownloadURL = "https://github.com/xiph/rav1e/releases",
         .HelpSwitch = "--help"})
 
     Shared Property aomenc As Package = Add(New Package With {
@@ -510,8 +511,6 @@ Public Class Package
         .Filename = "aomenc.exe",
         .Location = "Encoders\aomenc",
         .Description = "AV1 video encoder console app.",
-        .IsIncluded = False,
-        .VersionAllowAny = True,
         .WebURL = "https://aomedia.org",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
         .RequiredFunc = Function() TypeOf p.VideoEncoder Is aomenc,
@@ -618,8 +617,8 @@ Public Class Package
         .Name = "FFT3DFilter",
         .Filename = "fft3dfilter.dll",
         .WebURL = "http://github.com/pinterf/fft3dfilter",
+        .DownloadURL = "https://github.com/pinterf/fft3dfilter/releases",
         .Description = "FFT3DFilter uses Fast Fourier Transform method for image processing in frequency domain.",
-        .HelpFilename = "fft3dfilter.html",
         .AvsFilterNames = {"FFT3DFilter"},
         .AvsFiltersFunc = Function() {New VideoFilter("Noise", "FFT3DFilter | FFT3DFilter", "FFT3DFilter()")}})
 
@@ -927,7 +926,6 @@ Public Class Package
             .Filename = "mvtools2.dll",
             .WebURL = "http://github.com/pinterf/mvtools",
             .DownloadURL = "https://github.com/pinterf/mvtools/releases",
-            .HelpFilename = "mvtools2.html",
             .Description = "MVTools is collection of functions for estimation and compensation of objects motion in video clips. Motion compensation may be used for strong temporal denoising, advanced framerate conversions, image restoration and other tasks.",
             .AvsFilterNames = {"MSuper", "MAnalyse", "MCompensate", "MMask", "MDeGrain1", "MDeGrain2", "MDegrain3"}})
 
@@ -935,7 +933,6 @@ Public Class Package
             .Name = "DePan",
             .Filename = "DePan.dll",
             .Location = "Plugins\AVS\MVTools2",
-            .HelpFilename = "DePan.html",
             .WebURL = "https://github.com/pinterf/mvtools",
             .DownloadURL = "https://github.com/pinterf/mvtools/releases",
             .AvsFilterNames = {"DePan", "DePanInterleave", "DePanStabilize", "DePanScenes"}})
@@ -944,7 +941,6 @@ Public Class Package
             .Name = "DePanEstimate",
             .Location = "Plugins\AVS\MVTools2",
             .Filename = "DePanEstimate.dll",
-            .HelpFilename = "DePan.html",
             .WebURL = "https://github.com/pinterf/mvtools",
             .DownloadURL = "https://github.com/pinterf/mvtools/releases",
             .AvsFilterNames = {"DePanEstimate"}})

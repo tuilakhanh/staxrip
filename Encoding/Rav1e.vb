@@ -49,6 +49,7 @@ Public Class Rav1e
         Using proc As New Proc
             proc.Package = Package.Rav1e
             proc.Header = "Video encoding"
+            proc.FrameCount = p.Script.GetFrameCount
             proc.Encoding = Encoding.UTF8
             proc.WorkingDirectory = p.TempDir
             proc.Priority = priority
@@ -304,19 +305,22 @@ Public Class Rav1eParams
             ItemsValue.Add(i)
         Next
     End Sub
-    Overloads Overrides Function GetCommandLine(includePaths As Boolean,
-                                                includeExecutable As Boolean,
-                                                Optional pass As Integer = 1) As String
+
+    Overloads Overrides Function GetCommandLine(
+        includePaths As Boolean,
+        includeExecutable As Boolean,
+        Optional pass As Integer = 1) As String
 
         Return GetArgs(1, p.Script, p.VideoEncoder.OutputPath.DirAndBase +
                        p.VideoEncoder.OutputExtFull, includePaths, includeExecutable)
     End Function
 
-    Overloads Function GetArgs(pass As Integer,
-                               script As VideoScript,
-                               targetPath As String,
-                               includePaths As Boolean,
-                               includeExecutable As Boolean) As String
+    Overloads Function GetArgs(
+        pass As Integer,
+        script As VideoScript,
+        targetPath As String,
+        includePaths As Boolean,
+        includeExecutable As Boolean) As String
 
         Dim sb As New StringBuilder
 
@@ -330,7 +334,7 @@ Public Class Rav1eParams
             sb.Append(" " + q.Select(Function(item) item.GetArgs).Join(" "))
         End If
 
-        sb.Append(" -o " + targetPath.Escape + " - ")
+        sb.Append(" -y -o " + targetPath.Escape + " - ")
 
         Return Macro.Expand(sb.ToString.Trim.FixBreak.Replace(BR, " "))
     End Function

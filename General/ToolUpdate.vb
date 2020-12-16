@@ -210,11 +210,16 @@ Public Class ToolUpdate
             End If
         Next
 
+        If value Is Nothing Then
+            value = "???"
+        End If
+
+        value = value.Replace("_", " ")
         UpdatePackageDialog()
-        Dim input = InputBox.Show(msg, "StaxRip", value)
+        Dim input = InputBox.Show(msg, "StaxRip", value.Trim)
 
         If input <> "" Then
-            Package.SetVersion(input.Replace(";", "_"))
+            Package.SetVersion(input.Replace(";", "_").Trim)
             UpdatePackageDialog()
             g.DefaultCommands.TestAndDynamicFileCreation()
         End If
@@ -225,9 +230,9 @@ Public Class ToolUpdate
             Return True
         End If
 
-        Dim x86 = {"_Win32", "\x86", "-x86", "32-bit"}
+        Dim x86 = {"_win32", "\x86", "-x86", "32-bit", "-win32"}
 
-        If g.Is64Bit AndAlso value.ContainsAny(x86) Then
+        If g.Is64Bit AndAlso value.ToLower.ContainsAny(x86) Then
             Return True
         End If
     End Function

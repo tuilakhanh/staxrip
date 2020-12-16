@@ -1,6 +1,75 @@
 
-2.1.4.9 Beta (2020-09-??)
+2.1.5.3 Beta (2020-12-??)
 ============
+
+2.1.5.2 Beta (2020-12-15)
+============
+
+- StaxRip authors in about page updated. (stax76)
+- Fix progress bar not working for rav1e encoder. (stax76)
+- Tool updates (stax76, hevron)
+- Fix tool auto update crash in case of missing download URL. (stax76)
+- AVSMeter 3.0.7.0
+- D2VSource 1.2.0
+- KNLMeansCL 1.1.1e
+- masktools2 2.2.26
+- mvtools2 2.7.44
+- neo-minideen r10
+- TDeint 1.8
+- TIVTC 1.0.25
+- VSFilterMod 5.2.3
+- DFTTest r7
+- L-Smash-Works 2020-07-28 HolyWu
+- havsfunc r33
+- x264 M-0.161.3018-db0d417-x64-gcc10.2.0
+- ffmpeg N-99558-g00772ef4f7-x64-gcc10.2.0 Patman
+- JPSDR 3.2.4
+- rav1e 2020-12-08
+- Subtitle-Edit 3.5.18
+- aomenc 2.0.0-918-g75a47cc18-gcc10.2.0
+
+
+2.1.5.1 Beta (2020-12-15)
+============
+
+- Job processing issue fix (stax76, 44vince44, [#381](/../../issues/381))
+- Audio filename collision fix (stax76, Dendraspis, 44vince44, [#386](/../../issues/386), [#380](/../../issues/380), [#297](/../../issues/297))
+- The apps dialog has a new auto update feature,
+  works for many but not for all tools. (stax76)
+- nvenc new options added (stax76)
+- qsvenc new options added and reorganized (stax76)
+- Removed '--analysis-reuse-level' from x265 options, because deprecated (Dendraspis)
+- Fixed x265 wrong output params in 3-pass mode (Dendraspis, 44vince44, [#391](/../../issues/391))
+- vceenc 6.07
+- qsvenc 4.12
+- ffms2 87bae19 2020-11-23 StvG
+- L-Smash-Source 2020-12-11 StvG
+
+
+2.1.4.9 Beta (2020-12-13)
+============
+
+- Set the current directory of the StaxRip process to the working.
+  directory of the current project. (stax76, 44vince44, [#388](/../../issues/388))
+- Video encoders expand macros in custom options. (stax76, 44vince44, [#388](/../../issues/388))
+- Fix audio encoding overwriting original file. (stax76, 44vince44, [#380](/../../issues/380))
+- x265 --min-vbv-fullness --max-vbv-fullness --vbv-live-multi-pass (stax76)
+- ~~x265 multipass order refixed (Dendraspis, [#389](/../../issues/389))~~
+  Added comments in source code to prevent further confusions (Dendraspis, 44vince44)
+- x265 'Custom Nth Pass' added to options (Dendraspis, [#389](/../../issues/389))
+- x265 options order slightly changed (Dendraspis)
+- x265 'Analysis Save' has also a 'Browse File' button (Dendraspis)
+- Fixed x265 multipass order for chunks (Dendraspis)
+- Renamed x264/x265 passes for (n>2)-pass-mode (Dendraspis, 44vince44, [#389](/../../issues/389#issuecomment-743997077))
+- x265 3.4+53-ge4afbd100 2020-11-02 Yuuki/qyot27
+- nvenc 5.22
+- chapterEditor 1.25
+- SVT-AV1 0.8.6
+- MediaInfo.NET 6.8
+- MediaInfo 20.09
+- Get-MediaInfo 3.5
+- mpv.net 5.4.8.5
+
 
 2.1.4.8 Beta (2020-10-07)
 ============
