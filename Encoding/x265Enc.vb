@@ -976,8 +976,7 @@ Public Class x265Params
                     ConstVBV,
                     New BoolParam() With {.Switch = "--vbv-live-multi-pass", .Text = "VBV Live Multi Pass"},
                     New BoolParam() With {.Switch = "--aq-motion", .Text = "AQ Motion"},
-                    New BoolParam() With {.Switch = "--scenecut-aware-qp", .NoSwitch = "--no-scenecut-aware-qp", .Text = "Scenecut Aware QP"},
-                    New BoolParam() With {.Switch = "--vbv-live-multi-pass", .NoSwitch = "--no-vbv-live-multi-pass", .Text = "Realtime VBV in rate control 2 pass"})
+                    New BoolParam() With {.Switch = "--scenecut-aware-qp", .NoSwitch = "--no-scenecut-aware-qp", .Text = "Scenecut Aware QP"})
                 Add("Motion Search",
                     New StringParam With {.Switch = "--hme-search", .Text = "HME Search"},
                     New StringParam With {.Switch = "--hme-range", .Text = "HME Range", .Init = "16,32,48", .Quotes = QuotesMode.Never, .RemoveSpace = True},
