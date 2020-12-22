@@ -8,13 +8,13 @@ Public Class CommandLineForm
     Private Items As New List(Of Item)
     Private HighlightedControl As Control
 
-    Property HTMLHelp As String
+    Property HTMLHelpFunc As Func(Of String)
 
     Event BeforeHelp()
 
     Sub New(params As CommandLineParams)
         InitializeComponent()
-        SimpleUI.ScaleClientSize(37, 26)
+        SimpleUI.ScaleClientSize(38, 26)
 
         rtbCommandLine.ScrollBars = RichTextBoxScrollBars.None
         rtbCommandLine.ContextMenuStrip.Dispose()
@@ -188,7 +188,9 @@ Public Class CommandLineForm
                 helpControl = menuBlock.Label
                 AddHandler menuBlock.Label.MouseDoubleClick, Sub() tempOptionParam.ValueChangedUser(tempOptionParam.DefaultValue)
 
-                If oParam.Expand Then
+                Dim max = oParam.Options.Select(Function(txt) txt.Length).Max
+
+                If max > 25 Then
                     menuBlock.Button.Expand = True
                 End If
 
@@ -274,8 +276,8 @@ Public Class CommandLineForm
         form.Doc.WriteParagraph("The context help is shown with a right-click on a label, dropdown menu or checkbox.")
         form.Doc.WriteParagraph("The command line preview at the bottom of the dialog has a context menu that allows to quickly find and show options.")
 
-        If HTMLHelp <> "" Then
-            form.Doc.Writer.WriteRaw(HTMLHelp)
+        If Not HTMLHelpFunc Is Nothing Then
+            form.Doc.Writer.WriteRaw(HTMLHelpFunc.Invoke)
         End If
 
         form.Doc.WriteTips(SimpleUI.ActivePage.TipProvider.GetTips)

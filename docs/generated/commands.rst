@@ -33,6 +33,16 @@
     * - position <integer>
       - Position to insert new job
 
+.. option:: AddTags
+
+    Adds tags to the container (works only with mkvmerge).
+
+.. list-table::
+    :widths: auto
+
+    * - tags <string>
+      - name 1 = value 1; name 2 = value 2; etc.
+
 .. option:: CheckForUpdate
 
     Checks if a update is available.
@@ -99,7 +109,7 @@
     :widths: auto
 
     * - code <string>
-      - Script Code: PowerShell script code to be executed.
+      - Script Code: PowerShell script code to be executed. Macros are expanded.
     * - externalShell <boolean>
       - Use External Shell: Execute in StaxRip to automate StaxRip or use external shell.
 

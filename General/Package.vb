@@ -28,6 +28,7 @@ Public Class Package
     Property SetupAction As Action
     Property Siblings As String()
     Property StatusFunc As Func(Of String)
+    Property SupportsAutoUpdate As Boolean = True
     Property TreePath As String
     Property Version As String
     Property VersionAllowAny As Boolean
@@ -243,6 +244,7 @@ Public Class Package
         .Description = "Packing console app.",
         .WebURL = "https://www.7-zip.org",
         .HelpSwitch = "",
+        .SupportsAutoUpdate = False,
         .DownloadURL = "https://www.7-zip.org/download.html"})
 
     Shared Property xvid_encraw As Package = Add(New Package With {
@@ -473,7 +475,6 @@ Public Class Package
         .WebURL = "http://www.videolan.org/developers/x264.html",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
         .HelpURL = "http://www.chaneru.com/Roku/HLS/X264_Settings.htm",
-        .HelpFilename = "x264 Help.txt",
         .HelpSwitch = "--fullhelp"})
 
     Shared Property x265 As Package = Add(New Package With {
@@ -484,7 +485,6 @@ Public Class Package
         .HelpURL = "http://x265.readthedocs.org",
         .DownloadURL = "https://forum.doom9.org/showthread.php?p=1930644#post1930644",
         .HelpSwitch = "--log-level full --fullhelp",
-        .HelpFilename = "x265 Help.txt",
         .Description = "H.265 video encoding console app. Yuuki-Asuna mod built by qyot27."})
 
     Shared Property SVTAV1 As Package = Add(New Package With {
@@ -494,7 +494,7 @@ Public Class Package
         .WebURL = "https://github.com/OpenVisualCloud/SVT-AV1",
         .HelpURL = "https://github.com/OpenVisualCloud/SVT-AV1/blob/master/Docs/svt-av1_encoder_user_guide.md",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
-        .HelpSwitch = "stderr-help",
+        .HelpSwitch = "--help",
         .Description = "Intel AV1 encoder."})
 
     Shared Property Rav1e As Package = Add(New Package With {
@@ -512,7 +512,7 @@ Public Class Package
         .Location = "Encoders\aomenc",
         .Description = "AV1 video encoder console app.",
         .WebURL = "https://aomedia.org",
-        .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
+        .DownloadURL = "https://ci.appveyor.com/project/marcomsousa/build-aom/build/artifacts",
         .RequiredFunc = Function() TypeOf p.VideoEncoder Is aomenc,
         .HelpSwitch = "--help"})
 
@@ -588,8 +588,7 @@ Public Class Package
         .WebURL = "http://github.com/rigaya/NVEnc",
         .HelpURL = "https://github.com/rigaya/NVEnc/blob/master/NVEncC_Options.en.md",
         .DownloadURL = "https://github.com/rigaya/NVEnc/releases",
-        .Description = "NVIDIA hardware video encoder.",
-        .HelpFilename = "NVEnc Help.txt"})
+        .Description = "NVIDIA hardware video encoder."})
 
     Shared Property QSVEnc As Package = Add(New Package With {
         .Name = "QSVEnc",
@@ -597,7 +596,6 @@ Public Class Package
         .Filename32 = "QSVEncC.exe",
         .Location = "Encoders\QSVEnc",
         .Description = "Intel hardware video encoder.",
-        .HelpFilename = "QSVEnc Help.txt",
         .WebURL = "http://github.com/rigaya/QSVEnc",
         .DownloadURL = "https://github.com/rigaya/QSVEnc/releases",
         .HelpURL = "https://github.com/rigaya/QSVEnc/blob/master/QSVEncC_Options.en.md",
@@ -2129,6 +2127,10 @@ Public Class Package
 
     Public ReadOnly Property HelpFile As String
         Get
+            If HelpFilename = "" AndAlso Not HelpSwitch Is Nothing Then
+                HelpFilename = Name + " Help.txt"
+            End If
+
             Return Directory + HelpFilename
         End Get
     End Property

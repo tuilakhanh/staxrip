@@ -1,10 +1,34 @@
 
-2.1.5.3 Beta (2020-12-??)
+2.1.5.4 Beta (2020-12-??)
+============
+
+- Re-include "check also for new beta version" option in settings (Dendraspis)
+- Remove links from changelog when checking for new versions (Dendraspis)
+- Fix issues using multiple preview dialogs. (stax76, [#395](/../../issues/395), [#401](/../../issues/401))
+- New macros %video_encoder_settings% and %app_version:name% (stax76, [#367](/../../issues/367))
+- New command `AddTags` for adding mkv tags. (stax76, [#367](/../../issues/367))
+- aomenc default params updated and some fixes (Dendraspis, 44vince44, [#375](/../../issues/375))
+
+
+2.1.5.3 Beta (2020-12-19)
 ============
 
 - Stop saving empty log files (Dendraspis)
 - aomenc options reorganized, restructured and refreshed (Dendraspis, Neltulz, [#375](/../../issues/375))
 - Removed 'HDRCore-ToneMapping' because of use of DGTonemap (Dendraspis, JJKylee, 44vince44, [#369](/../../issues/369))
+- aomenc options optimized (Dendraspis, Neltulz, BlueSwordM , [#361](/../../issues/361))
+- aomenc dropdown controls have a properly expanded width. (stax76)
+- Fix rightclick on aomenc options doesn't show help (Dendraspis, [#365](/../../issues/365))
+- Expand 'Restore Profiles' to preserve possible custom profiles (Dendraspis)
+- Fix bug in ListBoxEx with selection after removing items (Dendraspis)
+- Command ExecutePowerShellScript expands macros. (stax76, [#308](/../../issues/308))
+- Fix StaxRip not finding the (installed) VapourSynth (per user) plugin directory, this could
+  lead to an error StaxRip trying to manually load plugins that were already auto loaded. (stax76, [#399](/../../issues/399))
+- Cut settings when created from the code editor preview were not applied. (stax76, [#395](/../../issues/395))
+- L-SMASH-Works 2020-12-16 StvG
+- AviSynth 3.6.2 test6
+- 7zip 19.0
+- aomenc 2.0.0-1117-g7ddc21b28
 
 
 2.1.5.2 Beta (2020-12-15)

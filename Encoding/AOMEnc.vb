@@ -100,7 +100,7 @@ Public Class aomenc
 
     Overrides Property QualityMode() As Boolean
         Get
-            Return Params.RateMode.OptionText.EqualsAny("CQ", "Q")
+            Return Params.RateMode.ValueText.EqualsAny("CQ", "Q")
         End Get
         Set(Value As Boolean)
         End Set
@@ -133,28 +133,40 @@ Public Class AV1Params
         .Name = "Passes",
         .Text = "Passes",
         .Switches = {"--passes", "--pass"},
-        .Options = {"One Pass", "Two Pass"}}
+        .Options = {"One Pass", "Two Pass"},
+        .Init = 1}
 
     Property RateMode As New OptionParam With {
         .Path = "Basic",
         .Switch = "--end-usage",
         .Text = "Rate Mode",
-        .Options = {"VBR", "CBR", "CQ", "Q"}}
+        .Options = {"VBR", "CBR", "CQ (Constrained Quality)", "Q (Constant Quality)"},
+        .Values = {"VBR", "CBR", "CQ", "Q"},
+        .AlwaysOn = True,
+        .Init = 3}
 
     Property TargetBitrate As New NumParam With {
         .Switch = "--target-bitrate",
-        .Text = "Target Bitrate"}
+        .Text = "Target Bitrate",
+        .VisibleFunc = Function() RateMode.Value <> 2 AndAlso RateMode.Value <> 3}
 
     Property WebM As New OptionParam With {
         .Path = "Basic",
         .Switch = "--webm",
         .Text = "Output WEBM",
+        .IntegerValue = True,
         .Options = {"0 - Disabled", "1 - Enabled (default when WebM IO is enabled)"}}
 
     Property Custom As New StringParam With {
-        .Path = "Custom",
         .Text = "Custom",
-        .AlwaysOn = True}
+        .Quotes = QuotesMode.Never,
+        .AlwaysOn = True,
+        .InitAction = Sub(tb)
+                          tb.Edit.Expand = True
+                          tb.Edit.TextBox.Multiline = True
+                          tb.Edit.MultilineHeightFactor = 6
+                          tb.Edit.TextBox.Font = New Font("Consolas", 10 * s.UIScaleFactor)
+                      End Sub}
 
 
     Overrides ReadOnly Property Items As List(Of CommandLineParam)
@@ -204,7 +216,7 @@ Public Class AV1Params
         Add(New BoolParam With {.Switch = "--i444", .Text = "I444"})
 
         Add(New NumParam With {.Switch = "--usage", .Text = "Usage"})
-        Add(New NumParam With {.Switch = "--threads", .Text = "Threads"})
+        Add(New NumParam With {.Switch = "--threads", .Text = "Threads", .Init = 128, .AlwaysOn = True})
         'Add(New OptionParam With {.Switch = "--profile", .Text = "Profile", .IntegerValue = True, .Options = {"Main", "High", "Professional"}})
         Add(New NumParam With {.Switch = "--profile", .Text = "Profile"})
         Add(New NumParam With {.Switch = "--width", .Text = "Width"})
@@ -223,7 +235,7 @@ Public Class AV1Params
 
         Add(New StringParam With {.Switch = "--global-error-resilient", .Text = "Global Error Resilient"})
         Add(New OptionParam With {.Switch = "--bit-depth", .Text = "Bit Depth", .Options = {"8", "10", "12"}, .Init = 1, .AlwaysOn = True})
-        Add(New NumParam With {.Switch = "--lag-in-frames", .Text = "Lag In Frames"})
+        Add(New NumParam With {.Switch = "--lag-in-frames", .Text = "Lag In Frames", .Init = 25})
         Add(New OptionParam With {.Switch = "--large-scale-tile", .Text = "Large Scale Tile Coding", .IntegerValue = True, .Options = {"Off", "On"}})
         Add(New BoolParam With {.Switch = "--monochrome", .Text = "Monochrome"})
         Add(New BoolParam With {.Switch = "--full-still-picture-hdr", .Text = "Full header for still picture"})
@@ -254,14 +266,14 @@ Public Class AV1Params
         AddTab("Rate Control 2")
         '######################
 
-        Add(New NumParam With {.Switch = "--undershoot-pct", .Text = "Undershoot PCT"})
-        Add(New NumParam With {.Switch = "--overshoot-pct", .Text = "Overshoot PCT"})
-        Add(New NumParam With {.Switch = "--buf-sz", .Text = "Buffer Size"})
-        Add(New NumParam With {.Switch = "--buf-initial-sz", .Text = "Buf Initial Size"})
-        Add(New NumParam With {.Switch = "--buf-optimal-sz", .Text = "Buf Optimal Size"})
-        Add(New NumParam With {.Switch = "--bias-pct", .Text = "Bias PCT", .Config = {0, 100}})
-        Add(New NumParam With {.Switch = "--minsection-pct", .Text = "Minsection PCT"})
-        Add(New NumParam With {.Switch = "--maxsection-pct", .Text = "Maxsection PCT"})
+        Add(New NumParam With {.Switch = "--undershoot-pct", .Text = "Datarate undershoot (min) target (%)"})
+        Add(New NumParam With {.Switch = "--overshoot-pct", .Text = "Datarate overshoot (max) target (%)"})
+        Add(New NumParam With {.Switch = "--buf-sz", .Text = "Client buffer size"})
+        Add(New NumParam With {.Switch = "--buf-initial-sz", .Text = "Client initial buffer size (ms)"})
+        Add(New NumParam With {.Switch = "--buf-optimal-sz", .Text = "Client optimal buffer size (ms)"})
+        Add(New NumParam With {.Switch = "--bias-pct", .Text = "CBR/VBR bias (0=CBR, 100=VBR)", .Config = {0, 100}})
+        Add(New NumParam With {.Switch = "--minsection-pct", .Text = "GOP min bitrate (% of target)"})
+        Add(New NumParam With {.Switch = "--maxsection-pct", .Text = "GOP max bitrate (% of target)"})
 
 
 
@@ -269,8 +281,8 @@ Public Class AV1Params
         '##########################
 
         Add(New NumParam With {.Switch = "--enable-fwd-kf", .Text = "Enable forward reference keyframes"})
-        Add(New NumParam With {.Switch = "--kf-min-dist", .Text = "Min keyframe interval"})
-        Add(New NumParam With {.Switch = "--kf-max-dist", .Text = "Max keyframe interval"})
+        Add(New NumParam With {.Switch = "--kf-min-dist", .Text = "Min keyframe interval", .Init = 23})
+        Add(New NumParam With {.Switch = "--kf-max-dist", .Text = "Max keyframe interval", .Init = 250})
         Add(New BoolParam With {.Switch = "--disable-kf", .Text = "Disable keyframe placement"})
 
 
@@ -278,17 +290,17 @@ Public Class AV1Params
         AddTab("AV1 Specific 1")
         '######################
 
-        Add(New OptionParam With {.Switch = "--cpu-used", .Text = "CPU Used", .Value = 8, .AlwaysOn = True, .IntegerValue = True, .Options = {"0 - Slowest", "1 - Very Slow", "2 - Slower", "3 - Slow", "4 - Medium", "5 - Fast", "6 - Faster", "7 - Very Fast", "8 - Ultra Fast", "9 - Fastest"}})
-        Add(New NumParam With {.Switch = "--auto-alt-ref", .Text = "Auto Alt Ref"})
+        Add(New OptionParam With {.Switch = "--cpu-used", .Text = "CPU Used", .Value = 4, .AlwaysOn = True, .IntegerValue = True, .Options = {"0 - Slowest", "1 - Very Slow", "2 - Slower", "3 - Slow", "4 - Medium", "5 - Fast", "6 - Faster", "7 - Very Fast", "8 - Ultra Fast", "9 - Fastest"}})
+        Add(New NumParam With {.Switch = "--auto-alt-ref", .Text = "Auto Alt Ref", .Init = 1, .AlwaysOn = True})
         Add(New NumParam With {.Switch = "--sharpness", .Text = "Sharpness", .Init = 0, .Config = {0, 7}})
-        Add(New NumParam With {.Switch = "--static-thresh", .Text = "Static Thresh"})
+        Add(New NumParam With {.Switch = "--static-thresh", .Text = "Static Thresh", .AlwaysOn = True})
         'Add(New OptionParam With {.Switch = "--row-mt", .Text = "Multi-Threading", .IntegerValue = True, .Options = {"On", "Off"}})
         Add(New BoolParam With {.Switch = "--row-mt", .Text = "Multi-Threading", .Init = True, .IntegerValue = True})
-        Add(New NumParam With {.Switch = "--tile-columns", .Text = "Tile Columns"})
-        Add(New NumParam With {.Switch = "--tile-rows", .Text = "Tile Rows"})
+        Add(New NumParam With {.Switch = "--tile-columns", .Text = "Tile Columns", .Init = 2, .AlwaysOn = True})
+        Add(New NumParam With {.Switch = "--tile-rows", .Text = "Tile Rows", .Init = 1, .AlwaysOn = True})
         'Add(New BoolParam With {.Switch = "--enable-tpl-model", .Text = "TPL model", .Init = True, .IntegerValue = True})
         Add(New OptionParam With {.Switch = "--enable-tpl-model", .Text = "TPL model", .Value = 1, .AlwaysOn = True, .IntegerValue = True, .Options = {"0 - Off", "1 - Backward source based"}})
-        Add(New OptionParam With {.Switch = "--enable-keyframe-filtering", .Text = "Keyframe Filtering", .Value = 1, .AlwaysOn = True, .IntegerValue = True, .Options = {"0 - No filter", "1 - Filter without overlay (default)", "2 - Filter with overlay"}})
+        Add(New OptionParam With {.Switch = "--enable-keyframe-filtering", .Text = "Keyframe Filtering", .Init = 1, .IntegerValue = True, .Options = {"0 - No filter", "1 - Filter without overlay (default)", "2 - Filter with overlay"}})
         Add(New NumParam With {.Switch = "--arnr-maxframes", .Text = "ARNR Max Frames", .Config = {0, 15}})
         Add(New NumParam With {.Switch = "--arnr-strength", .Text = "ARNR Filter Strength", .Config = {0, 6}})
 
@@ -298,7 +310,7 @@ Public Class AV1Params
         '######################
 
         Add(New OptionParam With {.Switch = "--tune", .Text = "Tune", .Options = {"psnr", "ssim", "vmaf_with_preprocessing", "vmaf_without_preprocessing", "vmaf", "vmaf_neg"}})
-        Add(New NumParam With {.Switch = "--cq-level", .Text = "CQ Level"})
+        Add(New NumParam With {.Switch = "--cq-level", .Text = "CQ Level", .Init = 24, .AlwaysOn = True})
         Add(New NumParam With {.Switch = "--max-intra-rate", .Text = "Max Intra Rate"})
         Add(New NumParam With {.Switch = "--max-inter-rate", .Text = "Max Inter Rate"})
         Add(New NumParam With {.Switch = "--gf-cbr-boost", .Text = "GF CBR Boost"})
@@ -365,9 +377,9 @@ Public Class AV1Params
         Add(New BoolParam With {.Switch = "--use-inter-dct-only", .Text = "DCT only for INTER modes"})
         Add(New BoolParam With {.Switch = "--use-intra-default-tx-only", .Text = "Default-transform only for INTRA modes"})
         Add(New BoolParam With {.Switch = "--quant-b-adapt", .Text = "Adaptive quantize_b"})
-        Add(New OptionParam With {.Switch = "--coeff-cost-upd-freq", .Text = "Update freq for coeff costs", .IntegerValue = True, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
-        Add(New OptionParam With {.Switch = "--mode-cost-upd-freq", .Text = "Update freq for mode costs", .IntegerValue = True, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
-        Add(New OptionParam With {.Switch = "--mv-cost-upd-freq", .Text = "Update freq for mv costs", .IntegerValue = True, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
+        Add(New OptionParam With {.Switch = "--coeff-cost-upd-freq", .Text = "Update freq for coeff costs", .IntegerValue = True, .Init = 2, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
+        Add(New OptionParam With {.Switch = "--mode-cost-upd-freq", .Text = "Update freq for mode costs", .IntegerValue = True, .Init = 2, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
+        Add(New OptionParam With {.Switch = "--mv-cost-upd-freq", .Text = "Update freq for mv costs", .IntegerValue = True, .Init = 2, .Options = {"0 - SB", "1 - SB Row per Tile", "2 - Tile", "3 - Off"}})
         Add(New BoolParam With {.Switch = "--frame-parallel", .Text = "Frame Parallel", .Init = False, .IntegerValue = True})
         Add(New BoolParam With {.Switch = "--error-resilient", .Text = "Error Resilient", .Init = False, .IntegerValue = True})
         Add(New OptionParam With {.Switch = "--aq-mode", .Text = "AQ Mode", .IntegerValue = True, .Options = {"Disabled", "Variance", "Complexity", "Cyclic Refresh"}})
@@ -487,7 +499,7 @@ Public Class AV1Params
                 sb.Append(" --passes=2 --pass=" & pass)
         End Select
 
-        If Not RateMode.OptionText.EqualsAny("CQ", "Q") Then
+        If Not RateMode.ValueText.EqualsAny("CQ", "Q") Then
             sb.Append(" --target-bitrate=" & p.VideoBitrate)
         End If
 

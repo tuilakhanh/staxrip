@@ -37,9 +37,10 @@ Public Class NVEnc
         newParams.Init(store)
 
         Using form As New CommandLineForm(newParams)
-            form.HTMLHelp = "<h2>NVEnc Help</h2>" + "<p>Right-clicking a option shows the local console help for the option.</p>" +
-                           $"<h2>NVEnc Online Help</h2><p><a href=""{Package.NVEnc.HelpURL}"">NVEnc Online Help</a></p>" +
-                           $"<h2>NVEnc Console Help</h2><pre>{HelpDocument.ConvertChars(Package.NVEnc.CreateHelpfile())}</pre>"
+            form.HTMLHelpFunc = Function() "<h2>NVEnc Help</h2>" +
+                 "<p>Right-clicking a option shows the local console help for the option.</p>" +
+                $"<h2>NVEnc Online Help</h2><p><a href=""{Package.NVEnc.HelpURL}"">NVEnc Online Help</a></p>" +
+                $"<h2>NVEnc Console Help</h2><pre>{HelpDocument.ConvertChars(Package.NVEnc.CreateHelpfile())}</pre>"
 
             Dim saveProfileAction = Sub()
                                         Dim enc = ObjectHelp.GetCopy(Of NVEnc)(Me)
@@ -157,7 +158,6 @@ Public Class NVEnc
 
         Property Mode As New OptionParam With {
             .Text = "Mode",
-            .Expand = True,
             .Switches = {"--cqp", "--cbr", "--cbrhq", "--vbr", "--vbrhq"},
             .Options = {"CQP - Constant QP",
                         "CBR - Constant Bitrate",
@@ -436,7 +436,7 @@ Public Class NVEnc
                         New BoolParam With {.Switch = "--weightp", .Text = "Enable weighted prediction in P slices"})
                     Add("Performance",
                         New StringParam With {.Switch = "--perf-monitor", .Text = "Perf. Monitor"},
-                        New OptionParam With {.Switch = "--cuda-schedule", .Text = "Cuda Schedule", .Expand = True, .Init = 3, .Options = {"Let cuda driver to decide", "CPU will spin when waiting GPU tasks", "CPU will yield when waiting GPU tasks", "CPU will sleep when waiting GPU tasks"}, .Values = {"auto", "spin", "yield", "sync"}},
+                        New OptionParam With {.Switch = "--cuda-schedule", .Text = "Cuda Schedule", .Init = 3, .Options = {"Let cuda driver to decide", "CPU will spin when waiting GPU tasks", "CPU will yield when waiting GPU tasks", "CPU will sleep when waiting GPU tasks"}, .Values = {"auto", "spin", "yield", "sync"}},
                         New OptionParam With {.Switch = "--output-buf", .Text = "Output Buffer", .Options = {"8", "16", "32", "64", "128"}},
                         New OptionParam With {.Switch = "--output-thread", .Text = "Output Thread", .Options = {"Automatic", "Disabled", "One Thread"}, .Values = {"-1", "0", "1"}},
                         New NumParam With {.Switch = "--perf-monitor-interval", .Init = 500, .Config = {50, Integer.MaxValue}, .Text = "Perf. Mon. Interval"},

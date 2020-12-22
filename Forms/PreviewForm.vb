@@ -254,6 +254,8 @@ Public Class PreviewForm
     Private TrackBarGap As Integer = 1
     Private TrackBarPosition As Integer = CInt(Control.DefaultFont.Height / 4) - 1
     Private VideoSize As Size
+    Private ShowPreviewInfo As Boolean
+    Private HidePreviewButtons As Boolean
 
     Private Shared Instances As New List(Of PreviewForm)
     Private WithEvents GenericMenu As CustomMenu
@@ -277,6 +279,8 @@ Public Class PreviewForm
         GenericMenu.BuildMenu()
 
         Instances.Add(Me)
+        ShowPreviewInfo = s.ShowPreviewInfo
+        HidePreviewButtons = s.HidePreviewButtons
 
         PreviewScript = script
     End Sub
@@ -380,24 +384,6 @@ Public Class PreviewForm
         For Each i In Instances
             SetRelativePos(100)
         Next
-    End Sub
-
-    Sub Wheel(sender As Object, e As MouseEventArgs) Handles MyBase.MouseWheel
-        Dim pos = 1
-
-        If Control.ModifierKeys = Keys.Control Then pos = 10
-        If Control.ModifierKeys = Keys.Shift Then pos = 100
-        If Control.ModifierKeys = Keys.Alt Then pos = 1000
-
-        If e.Delta < 0 Then
-            pos = pos * -1
-        End If
-
-        If s.ReverseVideoScrollDirection Then
-            pos = pos * -1
-        End If
-
-        SetRelativePos(pos)
     End Sub
 
     Function GetDrawPos(frame As Integer) As Integer
@@ -668,8 +654,8 @@ Public Class PreviewForm
 
     <Command("Shows/hides the buttons.")>
     Sub ShowHideButtons()
-        s.HidePreviewButtons = Not s.HidePreviewButtons
-        ShowButtons(Not s.HidePreviewButtons)
+        HidePreviewButtons = Not HidePreviewButtons
+        ShowButtons(Not HidePreviewButtons)
         AfterPositionChanged()
     End Sub
 
@@ -686,8 +672,8 @@ Public Class PreviewForm
 
     <Command("Shows/hides various infos.")>
     Sub ToggleInfos()
-        s.ShowPreviewInfo = Not s.ShowPreviewInfo
-        Renderer.ShowInfo = s.ShowPreviewInfo
+        ShowPreviewInfo = Not ShowPreviewInfo
+        Renderer.ShowInfo = ShowPreviewInfo
         Renderer.Draw()
     End Sub
 
@@ -695,7 +681,7 @@ Public Class PreviewForm
     Sub ShowExternalPlayer()
         Dim script = PreviewScript.GetNewScript()
         script.Path = (p.TempDir + p.TargetFile.Base + "_play." + script.FileType).ToShortFilePath
-        UpdateTrim(script)
+        g.UpdateTrim(script)
         g.PlayScript(script)
     End Sub
 
@@ -703,7 +689,7 @@ Public Class PreviewForm
     Sub PlayWithMpvnet()
         Dim script = PreviewScript.GetNewScript()
         script.Path = (p.TempDir + p.TargetFile.Base + "_play." + script.FileType).ToShortFilePath
-        UpdateTrim(script)
+        g.UpdateTrim(script)
         g.PlayScriptWithMPV(script, "--start=" + GetPlayPosition.ToString)
     End Sub
 
@@ -711,7 +697,7 @@ Public Class PreviewForm
     Sub PlayWithMPC()
         Dim script = PreviewScript.GetNewScript()
         script.Path = (p.TempDir + p.TargetFile.Base + "_play." + script.FileType).ToShortFilePath
-        UpdateTrim(script)
+        g.UpdateTrim(script)
         g.PlayScriptWithMPC(script, "/start " & GetPlayPosition.TotalMilliseconds)
     End Sub
 
@@ -936,57 +922,19 @@ Public Class PreviewForm
     Sub GenericMenu_Command(e As CustomMenuItemEventArgs) Handles GenericMenu.Command
         e.Handled = True
 
-        If e.Item.MethodName = "CloseDialog" Then
-            ProcessMenu(e.Item)
-        Else
-            For Each i In Instances
-                i.ProcessMenu(e.Item)
-            Next
-        End If
+        Select Case e.Item.MethodName
+            Case NameOf(CloseDialog), NameOf(PlayWithMPC), NameOf(PlayWithMpvnet)
+                ProcessMenu(e.Item)
+            Case Else
+                For Each i In Instances
+                    i.ProcessMenu(e.Item)
+                Next
+        End Select
     End Sub
 
     Sub ProcessMenu(item As CustomMenuItem)
         GenericMenu.Process(item)
     End Sub
-
-    Sub UpdateTrim(script As VideoScript)
-        script.RemoveFilter("Cutting")
-
-        If p.Ranges.Count > 0 Then
-            Dim cutFilter As New VideoFilter
-            cutFilter.Path = "Cutting"
-            cutFilter.Category = "Cutting"
-            cutFilter.Script = GetTrim()
-            cutFilter.Active = True
-            script.Filters.Add(cutFilter)
-        End If
-    End Sub
-
-    Function GetTrim() As String
-        Dim ret As String
-
-        For Each i In p.Ranges
-            If ret <> "" Then
-                ret += " + "
-            End If
-
-            If PreviewScript.Engine = ScriptEngine.AviSynth Then
-                ret += "Trim(" & i.Start & ", " & i.End & ")"
-
-                If p.TrimCode <> "" Then
-                    ret += "." + p.TrimCode.TrimStart("."c)
-                End If
-            Else
-                ret += "clip[" & i.Start & ":" & (i.End + 1) & "]"
-            End If
-        Next
-
-        If PreviewScript.Engine = ScriptEngine.AviSynth Then
-            Return ret
-        Else
-            Return "clip = " + ret
-        End If
-    End Function
 
     Sub Controls_Enter() Handles bnLeft3.Enter, bnLeft2.Enter, bnLeft1.Enter, bnRight1.Enter, bnRight2.Enter,
         bnRight3.Enter, bnEndCutRange.Enter, bnStartCutRange.Enter, bnDelete.Enter, bnMenu.Enter
@@ -1092,10 +1040,40 @@ Public Class PreviewForm
         Height = clientHeight + bordersHeight
     End Sub
 
+    Protected Overrides Sub OnMouseWheel(e As MouseEventArgs)
+        MyBase.OnMouseWheel(e)
+
+        Dim pos = 1
+
+        If Control.ModifierKeys = Keys.Control Then pos = 10
+        If Control.ModifierKeys = Keys.Shift Then pos = 100
+        If Control.ModifierKeys = Keys.Alt Then pos = 1000
+
+        If e.Delta < 0 Then
+            pos = pos * -1
+        End If
+
+        If s.ReverseVideoScrollDirection Then
+            pos = pos * -1
+        End If
+
+        SetRelativePos(pos)
+    End Sub
+
+    Protected Overrides Sub OnMouseClick(e As MouseEventArgs)
+        MyBase.OnMouseClick(e)
+
+        If Width - e.Location.X < 10 AndAlso e.Location.Y < 10 Then
+            Close()
+        End If
+    End Sub
+
     Protected Overrides Sub OnFormClosing(args As FormClosingEventArgs)
         MyBase.OnFormClosing(args)
         Instances.Remove(Me)
-        UpdateTrim(p.Script)
+        g.UpdateTrim(p.Script)
+        s.ShowPreviewInfo = ShowPreviewInfo
+        s.HidePreviewButtons = HidePreviewButtons
         s.LastPosition = Renderer.Position
         p.CutFrameCount = FrameServer.Info.FrameCount
         p.CutFrameRate = FrameServer.FrameRate
@@ -1181,12 +1159,6 @@ Public Class PreviewForm
         Dim p2 = PointToScreen(e.Location)
 
         If Math.Abs(p1.X - p2.X) <10 AndAlso Math.Abs(p1.Y - p2.Y) <10 Then
-            Close()
-        End If
-    End Sub
-
-    Sub PreviewForm_MouseClick(sender As Object, e As MouseEventArgs) Handles Me.MouseClick
-        If Width - e.Location.X < 10 AndAlso e.Location.Y < 10 Then
             Close()
         End If
     End Sub
