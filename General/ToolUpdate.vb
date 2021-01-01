@@ -22,7 +22,7 @@ Public Class ToolUpdate
     End Sub
 
     Async Sub Update()
-        Dim content = Await HttpClient.GetStringAsync(Package.DownloadURL)
+        Dim content = Await HttpClient.GetStringAsync(Package.GetDownloadURL)
         Dim matches = Regex.Matches(content, "href=(""|')[^ ]+\.(7z|zip|exe)(""|')")
 
         For Each match As Match In matches
@@ -39,7 +39,7 @@ Public Class ToolUpdate
             url = url.Substring(6, url.Length - 7)
 
             If Not url.StartsWith("http") AndAlso url.StartsWith("/") Then
-                Dim match2 = Regex.Match(Package.DownloadURL, "https?://[^/]+")
+                Dim match2 = Regex.Match(Package.GetDownloadURL, "https?://[^/]+")
                 url = match2.Value + url
             End If
 
@@ -90,8 +90,6 @@ Public Class ToolUpdate
                 Exit Sub
             End If
         End Using
-
-        FileHelp.Delete(DownloadFile, FileIO.RecycleOption.SendToRecycleBin)
 
         If Not File.Exists(ExtractDir + Package.Filename) Then
             Dim subDirs As New List(Of String)
@@ -196,28 +194,9 @@ Public Class ToolUpdate
 
     Sub EditVersion()
         Dim msg = "What's the name of the new version?" + BR2 + DownloadFile.FileName
-        Dim value As String
-        Dim base = DownloadFile.Base
 
-        For Each i In {"_x64", "_x86", "-64-bit-", "-32-bit-"}
-            If base.Contains(i) Then
-                base = base.Replace(i, "")
-            End If
-        Next
-
-        For Each i In base
-            If "0123456789.-_".Contains(i) Then
-                value += i
-            End If
-        Next
-
-        If value Is Nothing Then
-            value = "???"
-        End If
-
-        value = value.Replace("_", " ")
         UpdatePackageDialog()
-        Dim input = InputBox.Show(msg, "StaxRip", value.Trim)
+        Dim input = InputBox.Show(msg, "StaxRip", DownloadFile.Base)
 
         If input <> "" Then
             Package.SetVersion(input.Replace(";", "_").Trim)

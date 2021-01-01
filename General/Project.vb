@@ -54,6 +54,7 @@ Public Class Project
     Public MKVHDR As Boolean
     Public MTN As Boolean
     Public NoDialogs As Boolean
+    Public NoTempDir As Boolean
     Public PreferredAudio As String
     Public PreferredSubtitles As String
     Public Ranges As List(Of Range)
@@ -233,13 +234,6 @@ Public Class Project
                     Exit Property
                 End If
 
-                If Text.Encoding.Default.CodePage <> 65001 AndAlso
-                    Not value.IsANSICompatible AndAlso Script.Engine = ScriptEngine.AviSynth Then
-
-                    MsgWarn(Strings.NoUnicode)
-                    Exit Property
-                End If
-
                 TargetFileValue = value
                 NotifyPropertyChanged()
             End If
@@ -247,7 +241,7 @@ Public Class Project
     End Property
 
     Sub AddHardcodedSubtitleFilter(path As String, showErrorMsg As Boolean)
-        If p.Script.Engine = ScriptEngine.AviSynth Then
+        If p.Script.IsAviSynth Then
             Dim filterName As String
 
             Select Case path.Ext

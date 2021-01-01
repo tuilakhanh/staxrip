@@ -9,6 +9,7 @@ Public Class Package
 
     Property Description As String
     Property DownloadURL As String
+    Property DownloadURLs As StringPair()
     Property Exclude As String()
     Property Filename32 As String
     Property Find As Boolean = True
@@ -87,6 +88,7 @@ Public Class Package
         .Name = "ffmpeg",
         .Filename = "ffmpeg.exe",
         .Location = "Encoders\ffmpeg",
+        .Keep = {"AviSynth.dll"},
         .WebURL = "http://ffmpeg.org",
         .HelpURL = "http://www.ffmpeg.org/documentation.html",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
@@ -117,6 +119,16 @@ Public Class Package
         .Keep = {"QTfiles64", "libsndfile-1.dll", "libFLAC_dynamic.dll"},
         .RequiredFunc = Function() Audio.IsEncoderUsed(GuiAudioEncoder.qaac),
         .Description = "Console AAC encoder using the non-free Apple AAC encoder."})
+
+    Shared Property QuickTime As Package = Add(New Package With {
+        .Name = "Apple QuickTime",
+        .Filename = "CoreAudioToolbox.dll",
+        .DownloadURL = "https://www.microsoft.com/en-gb/p/itunes/9pb2mz1zmb1s",
+        .SupportsAutoUpdate = False,
+        .VersionAllowAny = True,
+        .IsIncluded = False,
+        .RequiredFunc = Function() Audio.IsEncoderUsed(GuiAudioEncoder.qaac),
+        .Description = "qaac requires this library for AAC encoding."})
 
     Shared Property fdkaac As Package = Add(New Package With {
         .Name = "fdkaac",
@@ -151,6 +163,7 @@ Public Class Package
         .Name = "MediaInfo",
         .Filename = "MediaInfo.dll",
         .Location = "Support\MediaInfo.NET",
+        .SupportsAutoUpdate = False,
         .WebURL = "http://mediaarea.net/en/MediaInfo",
         .DownloadURL = "https://mediaarea.net/en/MediaInfo/Download/Windows",
         .Description = "Library to retrieve info from media files."})
@@ -161,12 +174,14 @@ Public Class Package
         .Location = "Support\MediaInfo.NET",
         .WebURL = "https://github.com/stax76/MediaInfo.NET",
         .DownloadURL = "https://github.com/stax76/MediaInfo.NET/releases",
+        .SupportsAutoUpdate = False,
         .Description = "GUI app originally built for StaxRip to show info about media files."})
 
     Shared Property GetMediaInfo As Package = Add(New Package With {
         .Name = "Get-MediaInfo",
         .Location = "Support\MediaInfo.NET",
         .Filename = "Get-MediaInfo.ps1",
+        .SupportsAutoUpdate = False,
         .Description = "Complete PowerShell MediaInfo solution used for the media info folder view.",
         .WebURL = "https://github.com/stax76/Get-MediaInfo",
         .DownloadURL = "https://github.com/stax76/Get-MediaInfo/releases"})
@@ -175,7 +190,7 @@ Public Class Package
         .Name = "MP4Box",
         .Filename = "MP4Box.exe",
         .Location = "Support\MP4Box",
-        .WebURL = "http://gpac.wp.mines-telecom.fr/",
+        .WebURL = "http://gpac.wp.mines-telecom.fr",
         .HelpURL = "http://gpac.wp.mines-telecom.fr/mp4box/mp4box-documentation",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
         .HelpSwitch = "-h",
@@ -191,7 +206,7 @@ Public Class Package
         .Description = "Video processing scripting library.",
         .Exclude = {"_arm64", "_xp", ".exe"},
         .HintDirFunc = Function() Package.AviSynth.GetAviSynthHintDir,
-        .RequiredFunc = Function() p.Script.Engine = ScriptEngine.AviSynth})
+        .RequiredFunc = Function() p.Script.IsAviSynth})
 
     Shared Property VapourSynth As Package = Add(New Package With {
         .Name = "VapourSynth",
@@ -342,6 +357,7 @@ Public Class Package
         .Filename = "mpvnet.exe",
         .Location = "Support\mpv.net",
         .WebURL = "https://github.com/stax76/mpv.net",
+        .DownloadURL = "https://github.com/stax76/mpv.net#download",
         .Description = "The worlds best media player (GUI app)."})
 
     Shared Property MpcBE As Package = Add(New Package With {
@@ -351,7 +367,7 @@ Public Class Package
         .IsIncluded = False,
         .VersionAllowAny = True,
         .Required = False,
-        .WebURL = "https://sourceforge.net/projects/mpcbe/",
+        .WebURL = "https://sourceforge.net/projects/mpcbe",
         .Description = "DirectShow based media player (GUI app).",
         .Locations = {Registry.LocalMachine.GetString("SOFTWARE\MPC-BE", "ExePath").Dir, Folder.Programs + "MPC-BE x64"}})
 
@@ -362,7 +378,7 @@ Public Class Package
         .IsIncluded = False,
         .VersionAllowAny = True,
         .Required = False,
-        .WebURL = "https://mpc-hc.org/",
+        .WebURL = "https://mpc-hc.org",
         .Description = "DirectShow based media player (GUI app).",
         .Locations = {Registry.CurrentUser.GetString("Software\MPC-HC\MPC-HC", "ExePath").Dir, Folder.Programs + "MPC-HC"}})
 
@@ -472,6 +488,7 @@ Public Class Package
         .Filename = "x264.exe",
         .Location = "Encoders\x264",
         .Description = "H.264 video encoding console app. Patman mod supports vpy input and shows the estimated size in the status line.",
+        .Keep = {"AviSynth.dll"},
         .WebURL = "http://www.videolan.org/developers/x264.html",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
         .HelpURL = "http://www.chaneru.com/Roku/HLS/X264_Settings.htm",
@@ -481,11 +498,12 @@ Public Class Package
         .Name = "x265",
         .Location = "Encoders\x265",
         .Filename = "x265.exe",
-        .WebURL = "https://github.com/msg7086/x265-Yuuki-Asuna",
+        .WebURL = "https://x265.com",
         .HelpURL = "http://x265.readthedocs.org",
-        .DownloadURL = "https://forum.doom9.org/showthread.php?p=1930644#post1930644",
+        .Keep = {"AviSynth.dll"},
         .HelpSwitch = "--log-level full --fullhelp",
-        .Description = "H.265 video encoding console app. Yuuki-Asuna mod built by qyot27."})
+        .Description = "H.265 video encoding console app.",
+        .DownloadURL = "https://github.com/staxrip/staxrip/wiki/x265#x265-builds"})
 
     Shared Property SVTAV1 As Package = Add(New Package With {
         .Name = "SVT-AV1",
@@ -512,15 +530,16 @@ Public Class Package
         .Location = "Encoders\aomenc",
         .Description = "AV1 video encoder console app.",
         .WebURL = "https://aomedia.org",
-        .DownloadURL = "https://ci.appveyor.com/project/marcomsousa/build-aom/build/artifacts",
         .RequiredFunc = Function() TypeOf p.VideoEncoder Is aomenc,
-        .HelpSwitch = "--help"})
+        .HelpSwitch = "--help",
+        .DownloadURLs = {New StringPair("Patman MediaFire Folder", "https://www.mediafire.com/folder/9gxbsrup4j872/StaxRip_Universe#vkt2ckzjvt0qf"),
+                         New StringPair("Marco Sousa appveyor auto build", "https://ci.appveyor.com/project/marcomsousa/build-aom/build/artifacts")}})
 
     Shared Property mkvmerge As Package = Add(New Package With {
         .Name = "mkvmerge",
         .Filename = "mkvmerge.exe",
         .Location = "Support\MKVToolNix",
-        .WebURL = "https://mkvtoolnix.download/",
+        .WebURL = "https://mkvtoolnix.download",
         .HelpURL = "https://mkvtoolnix.download/docs.html",
         .DownloadURL = "https://www.videohelp.com/software/MKVToolNix",
         .HelpSwitch = "",
@@ -532,7 +551,7 @@ Public Class Package
         .Name = "mkvextract",
         .Filename = "mkvextract.exe",
         .Location = "Support\MKVToolNix",
-        .WebURL = "https://mkvtoolnix.download/",
+        .WebURL = "https://mkvtoolnix.download",
         .HelpURL = "https://mkvtoolnix.download/docs.html",
         .DownloadURL = "https://www.videohelp.com/software/MKVToolNix",
         .HelpSwitch = "",
@@ -544,7 +563,7 @@ Public Class Package
         .Name = "mkvinfo",
         .Filename = "mkvinfo.exe",
         .Location = "Support\MKVToolNix",
-        .WebURL = "https://mkvtoolnix.download/",
+        .WebURL = "https://mkvtoolnix.download",
         .HelpURL = "https://mkvtoolnix.download/docs.html",
         .DownloadURL = "https://www.videohelp.com/software/MKVToolNix",
         .HelpSwitch = "",
@@ -558,7 +577,7 @@ Public Class Package
         .Location = "Support\MKVToolNix",
         .Siblings = {"mkvextract", "mkvinfo", "mkvmerge"},
         .Exclude = {"-setup"},
-        .WebURL = "https://mkvtoolnix.download/",
+        .WebURL = "https://mkvtoolnix.download",
         .HelpURL = "https://mkvtoolnix.download/docs.html",
         .DownloadURL = "https://www.videohelp.com/software/MKVToolNix",
         .Description = "MKV muxing/demuxing GUI app."})
@@ -575,7 +594,7 @@ Public Class Package
         .Filename = "apngopt.exe",
         .HelpFilename = "help.txt",
         .Location = "Thumbnails\PNGopt",
-        .WebURL = "https://sourceforge.net/projects/apng/files/",
+        .WebURL = "https://sourceforge.net/projects/apng/files",
         .HelpSwitch = "",
         .Description = "Opt Tools For Creating PNG"})
 
@@ -607,6 +626,7 @@ Public Class Package
         .Filename32 = "VCEEncC.exe",
         .Location = "Encoders\VCEEnc",
         .Description = "AMD hardware video encoder.",
+        .Keep = {"AviSynth.dll"},
         .HelpSwitch = "-h",
         .WebURL = "http://github.com/rigaya/VCEEnc",
         .DownloadURL = "https://github.com/rigaya/VCEEnc/releases"})
@@ -744,7 +764,7 @@ Public Class Package
         .DownloadURL = "https://github.com/realfinder/AVS-Stuff/blob/master/avs%202.5%20and%20up/LSFmod.avsi",
         .Description = "A LimitedSharpenFaster mod with a lot of new features and optimizations.",
         .AvsFilterNames = {"LSFmod"},
-        .AvsFiltersFunc = Function() {New VideoFilter("Line", "Sharpen | LSFmod", "LSFmod(defaults=""slow"", strength=100, Smode=5, Smethod=3, kernel=11, preblur=""OFF"", secure=true, Szrp=16, Spwr=4, SdmpLo=4, SdmpHi=48, Lmode=4, overshoot=1, undershoot=1, Overshoot2=1, Undershoot2=1, soft=-2, soothe=true, keep=20, edgemode=0, edgemaskHQ=true, ss_x=1.50, ss_y=1.50, dest_x=%target_width%, dest_y=%target_height%, show=false, screenW=1280, screenH=1024)")}})
+        .AvsFiltersFunc = Function() {New VideoFilter("Line", "Sharpen | LSFmod", "LSFmod(defaults=""slow"", strength=100, Smode=5, Smethod=3, kernel=11, secure=true, Szrp=16, Spwr=4, SdmpLo=4, SdmpHi=48, Lmode=4, overshoot=1, undershoot=1, Overshoot2=1, Undershoot2=1, soft=-2, soothe=true, keep=20, edgemode=0, edgemaskHQ=true, ss_x=1.50, ss_y=1.50, dest_x=%target_width%, dest_y=%target_height%, show=false, screenW=1280, screenH=1024)")}})
 
     Shared Property TemporalDegrain2 As Package = Add(New PluginPackage With {
         .Name = "TemporalDegrain2",
@@ -1307,7 +1327,7 @@ Public Class Package
             .Filename = "Deblock.dll",
             .Location = "Plugins\VS\Deblock",
             .Description = "Deblocking plugin using the deblocking filter of h264.",
-            .WebURL = "http://github.com/HomeOfVapourSynthEvolution/VapourSynth-Deblock/",
+            .WebURL = "http://github.com/HomeOfVapourSynthEvolution/VapourSynth-Deblock",
             .VSFilterNames = {"deblock.Deblock"},
             .VSFiltersFunc = Function() {New VideoFilter("Restoration", "DeBlock | DeBlock", "clip = core.deblock.Deblock(clip, quant=25, aoffset=0, boffset=0)")}})
 
@@ -1658,6 +1678,14 @@ Public Class Package
             .WebURL = "https://github.com/sekrit-twc/znedi3",
             .Description = "znedi3 is a CPU-optimized version of nnedi.",
             .VSFilterNames = {"znedi3.nnedi3"}})
+
+        Add(New PluginPackage With {
+            .Name = "CAS",
+            .Filename = "CAS.dll",
+            .WebURL = "https://github.com/HomeOfVapourSynthEvolution/VapourSynth-CAS",
+            .DownloadURL = "https://github.com/HomeOfVapourSynthEvolution/VapourSynth-CAS/releases",
+            .Description = "Contrast Adaptive Sharpening.",
+            .VSFilterNames = {"cas.CAS"}})
 
         Add(New PluginPackage With {
             .Name = "nnedi3cl",
@@ -2106,7 +2134,7 @@ Public Class Package
 
         If count > 1 Then
             Using dialog As New TaskDialog(Of String)
-                dialog.MainInstruction = "Choose option"
+                dialog.MainInstruction = "Choose a help option"
 
                 For Each pair In dic
                     If pair.Value <> "" Then
@@ -2125,7 +2153,15 @@ Public Class Package
         End If
     End Sub
 
-    Public ReadOnly Property HelpFile As String
+    Function GetDownloadURL() As String
+        If DownloadURL <> "" Then
+            Return DownloadURL
+        ElseIf Not DownloadURLs Is Nothing Then
+            Return DownloadURLs(0).Value
+        End If
+    End Function
+
+    ReadOnly Property HelpFile As String
         Get
             If HelpFilename = "" AndAlso Not HelpSwitch Is Nothing Then
                 HelpFilename = Name + " Help.txt"
@@ -2135,7 +2171,7 @@ Public Class Package
         End Get
     End Property
 
-    Public ReadOnly Property URL As String
+    ReadOnly Property URL As String
         Get
             If WebURL <> "" Then
                 Return WebURL
@@ -2147,11 +2183,13 @@ Public Class Package
                 Return HelpUrlVapourSynth
             ElseIf DownloadURL <> "" Then
                 Return DownloadURL
+            ElseIf Not DownloadURLs Is Nothing Then
+                Return DownloadURLs(0).Value
             End If
         End Get
     End Property
 
-    Public ReadOnly Property HelpFileOrURL As String
+    ReadOnly Property HelpFileOrURL As String
         Get
             If HelpFilename <> "" Then
                 Return HelpFile
@@ -2165,6 +2203,8 @@ Public Class Package
                 Return WebURL
             ElseIf DownloadURL <> "" Then
                 Return DownloadURL
+            ElseIf Not DownloadURLs Is Nothing Then
+                Return DownloadURLs(0).Value
             Else
                 Return "https://github.com/staxrip/staxrip/wiki/" + Name.Replace(" ", "-")
             End If
@@ -2186,7 +2226,7 @@ Public Class Package
 
                 Return HelpFile.ReadAllText
             End If
-        Catch ex As Exception
+        Catch
         End Try
 
         Return ""
@@ -2257,7 +2297,7 @@ Public Class Package
 
     Function GetStatusLocation() As String
         If Path = "" Then
-            Return "App not found, use the Path menu to locate the App."
+            Return $"App not found, choose 'Tools > Edit Path' to locate {Filename}."
         End If
     End Function
 
@@ -2650,7 +2690,7 @@ Public Class PluginPackage
             Return False
         End If
 
-        If p.Script.Engine = ScriptEngine.AviSynth AndAlso
+        If p.Script.IsAviSynth AndAlso
             Not package.AvsFilterNames.NothingOrEmpty Then
 
             Dim scriptLower = p.Script.GetScript().ToLowerInvariant

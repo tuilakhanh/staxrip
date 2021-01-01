@@ -19,33 +19,50 @@ Supported are three different demuxing modes:
 2. Only audio and subtitle streams of preferred languages are automatically demuxed.
 3. A dialog is shown where users can select which audio and subtitle streams should be demuxed.
 
-The demuxing mode can be defined in the project options under the Audio and Subtitles tab.
+The demuxing mode can be defined in the project options under
+ the Audio and Subtitles tab.
 
-When demuxing is disabled StaxRip will still find and include audio and subtitle tracks directly from the source file using a demux free mode, to prevent this the Preferred Languages option has to be cleared.
+When demuxing is disabled StaxRip will still find and include audio and
+subtitle tracks directly from the source file using a demux free mode,
+to prevent this the Preferred Languages option has to be cleared.
 
-Custom preprocessing tools for demuxing, re-muxing or indexing can be integrated and configured via command line to either execute a preprocessing tool like a demuxer directly or with a scripting tool like PowerShell or Python. When a preprocessing command line executes, all console tools are added to the path environment variable and all macros are available as environment variables. Preprocessing can be customized in the Settings dialog under Preprocessing.
+Custom preprocessing tools for demuxing, re-muxing or indexing can be
+integrated and configured via command line to either execute a preprocessing
+tool like a demuxer directly or with a scripting tool like PowerShell or Python.
+When a preprocessing command line executes, all console tools are added to the
+path environment variable and all macros are available as environment variables.
+Preprocessing can be customized in the Settings dialog under Preprocessing.
 
 
 Video Processing
 ================
 
-Video processing is supported via AviSynth and VapourSynth with AviSynth and VapourSynth being equally well supported.
+Video processing is supported via AviSynth and VapourSynth,
+both being equally well supported.
 
-The script code of AviSynth and VapourSynth can be edited directly or easily be generated via menu selection for which a profile system is available to integrate and customize custom filters and plugins.
+The script code of AviSynth and VapourSynth can be edited directly or
+easily be generated via menu selection for which a profile system is
+available to integrate and customize custom filters and plugins.
 
-With the help of a macro system script parameters can be changed with convenient GUI features like a resize slider and menu or a cropping dialog, due to the macro system the parameters can change at any time allowing much greater flexibility compared to a one dimensional and limiting one step after another approach.
+With the help of a macro system script parameters can be changed with
+convenient GUI features like a resize slider and menu or a cropping dialog,
+due to the macro system the parameters can change at any time allowing much
+greater flexibility compared to a one dimensional and limiting one step after
+another approach.
 
 
 Filter Profiles
 ---------------
 
-StaxRip includes a large set of filter plugins and filter presets for the plugins. The presets can be selected in the filter menu.
+StaxRip includes a large set of filter plugins and filter presets for the plugins.
+The presets can be selected in the filter menu.
 
 
 Custom Filter Profiles
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The filter profiles editor can be used to customize the included filter profiles and to create new custom filter profiles.
+The filter profiles editor can be used to customize the included
+filter profiles and to create new custom filter profiles.
 
 The profile editor can be found at:
 
@@ -84,6 +101,37 @@ Example:
     yadifmod2 =
         LoadPlugin("D:\yadifmod2\yadifmod2.dll")
         yadifmod2()
+
+
+Opening scripts externally
+--------------------------
+
+Opening AviSynth and VapourSynth scripts with external apps
+from outside of StaxRip might require adding various directories
+to the PATH environment variable.
+
+The Apps dialog has a feature that helps adding the directories:
+
+Apps > Manage > Tools > Path Env Var
+
+Consider adding the following directories to PATH:
+
+**Apps\\FrameServer\\AviSynth**
+
+**Apps\\FrameServer\\VapourSynth**
+
+Legacy apps like VirtualDub2 or MPC player are VFW based and therefore
+require AviSynth/VapourSynth being installed. For modern apps like mpv.net
+it's sufficient to add the portable AviSynth/VapourSynth folder to PATH.
+
+**Apps\\Support\\VC**
+
+This is a VC++ runtime All-in-One package which many apps, libraries
+and plugins depend on.
+
+**Apps\\Support\\FFTW**
+
+This a library which many AviSynth and VapourSynth plugins depend on.
 
 
 Templates

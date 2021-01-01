@@ -7,7 +7,7 @@ Imports System.Management
 Imports System.Runtime.InteropServices
 Imports System.Text
 Imports System.Text.RegularExpressions
-
+Imports Microsoft.Win32
 Imports StaxRip.UI
 
 Public Module ShortcutModule
@@ -950,18 +950,19 @@ Public Class GUIDS
 End Class
 
 Public Class M2TSStream
-    Property Text As String = "Nothing"
-    Property Codec As String = ""
-    Property OutputType As String = ""
-    Property Options As String = ""
-    Property ID As Integer
-    Property IsVideo As Boolean
-    Property IsAudio As Boolean
-    Property IsSubtitle As Boolean
-    Property IsChapters As Boolean
-    Property Language As New Language
     Property Checked As Boolean
+    Property Codec As String = ""
+    Property ID As Integer
+    Property IsAudio As Boolean
+    Property IsChapters As Boolean
+    Property IsSubtitle As Boolean
+    Property IsVideo As Boolean
+    Property Language As New Language
     Property ListViewItem As ListViewItem
+    Property Options As String = ""
+    Property OutputType As String = ""
+    Property Text As String = "Nothing"
+    Property TypeID As Integer
 
     Sub UpdateListViewItem()
         ListViewItem.Text = ToString()
@@ -1200,7 +1201,7 @@ Public Class Subtitle
 
     ReadOnly Property Filename As String
         Get
-            Dim ret = "ID" & (StreamOrder + 1)
+            Dim ret = "ID" & (Index + 1)
             ret += " " + Language.Name
 
             If Title <> "" AndAlso Title <> " " AndAlso p.SourceFile <> "" Then
@@ -1327,8 +1328,14 @@ Public Class Subtitle
 
             Dim autoCode = p.PreferredSubtitles.ToLower.SplitNoEmptyAndWhiteSpace(",", ";", " ")
             st.Enabled = autoCode.ContainsAny("all", st.Language.TwoLetterCode, st.Language.ThreeLetterCode)
-
             st.Path = path
+
+            For Each i In autoCode
+                If i.IsInt AndAlso st.Path.Contains("ID" & i.ToInt & " ") Then
+                    st.Enabled = True
+                End If
+            Next
+
             ret.Add(st)
         End If
 
@@ -1347,6 +1354,12 @@ Public Class Subtitle
                 If enabledSubs.Count > 1 Then
                     enabledSubs(1).Default = True
                 End If
+            Case DefaultSubtitleMode.Default
+                For Each st In enabledSubs
+                    If st.Path.Contains("_default") Then
+                        st.Default = True
+                    End If
+                Next
         End Select
 
         For Each st In ret
@@ -1519,15 +1532,10 @@ Public Class FileTypes
 End Class
 
 Public Class OSVersion
-    Shared Property Windows7 As Single = 6.1
-    Shared Property Windows8 As Single = 6.2
-    Shared Property Windows10 As Single = 10.0
-
-    Shared ReadOnly Property Current As Single
-        Get
-            Return CSng(Environment.OSVersion.Version.Major + Environment.OSVersion.Version.Minor / 10)
-        End Get
-    End Property
+    Shared ReadOnly Property Windows7 As Single = 6.1
+    Shared ReadOnly Property Windows8 As Single = 6.2
+    Shared ReadOnly Property Windows10 As Single = 10.0
+    Shared ReadOnly Property Current As Single = CSng(Environment.OSVersion.Version.Major + Environment.OSVersion.Version.Minor / 10)
 End Class
 
 Public Class OS
@@ -3807,6 +3815,7 @@ Public Enum DefaultSubtitleMode
     Second
     English
     Native
+    [Default]
 End Enum
 
 Public Class Attachment
@@ -3855,3 +3864,38 @@ End Enum
 Public Interface IUpdateUI
     Sub UpdateUI()
 End Interface
+
+Public Class TextEncoding
+    Shared Property EncodingOfProcess As Encoding = Encoding.Default
+    Shared Property CodePageOfProcess As Integer = Encoding.Default.CodePage
+    Shared Property CodePageOfSystem As Integer = Registry.LocalMachine.GetString("SYSTEM\CurrentControlSet\Control\Nls\CodePage", "ACP").ToInt
+    Shared Property EncodingOfSystem As Encoding = Encoding.GetEncoding(CodePageOfSystem)
+    Shared Property PathsSupportedBySystemEncoding As New Dictionary(Of String, Boolean)
+    Shared Property UTF8CodePage As Integer = 65001
+
+    Shared Function IsPathSupportedBySystemEncoding(path As String) As Boolean
+        If path = "" Then
+            Return True
+        End If
+
+        If Not PathsSupportedBySystemEncoding.ContainsKey(path) Then
+            PathsSupportedBySystemEncoding(path) = path.IsSystemEncodingCompatible
+        End If
+
+        Return PathsSupportedBySystemEncoding(path)
+    End Function
+
+    Shared Function IsSystemUTF8() As Boolean
+        Return CodePageOfSystem = UTF8CodePage
+    End Function
+
+    Shared Function AvsEncoderSupportsUTF8(Optional commandLine As String = Nothing) As Boolean
+        If commandLine = "" Then
+            commandLine = p.VideoEncoder.GetCommandLine(True, True)
+        End If
+
+        If commandLine <> "" Then
+            Return commandLine.Contains("x264") AndAlso commandLine.Contains(".avs") AndAlso Not g.ContainsPipeTool(commandLine)
+        End If
+    End Function
+End Class

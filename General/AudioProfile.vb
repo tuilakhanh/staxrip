@@ -745,7 +745,7 @@ Public Class GUIAudioProfile
             Dim cl = GetCommandLine(True)
 
             Using proc As New Proc
-                proc.Header = "Audio Encoding " & GetTrackIndex()
+                proc.Header = "Audio Encoding " & (GetTrackIndex() + 1)
 
                 If cl.Contains("|") Then
                     proc.File = "cmd.exe"
@@ -757,6 +757,7 @@ Public Class GUIAudioProfile
                 If cl.Contains("qaac64") Then
                     proc.Package = Package.qaac
                     proc.SkipStrings = {", ETA ", "x)"}
+                    proc.AddToPath(Package.QuickTime.Directory)
                 ElseIf cl.Contains("fdkaac") Then
                     proc.Package = Package.fdkaac
                     proc.SkipStrings = {"%]", "x)"}
@@ -764,7 +765,7 @@ Public Class GUIAudioProfile
                     proc.Package = Package.eac3to
                     proc.SkipStrings = {"process: ", "analyze: "}
                     proc.TrimChars = {"-"c, " "c}
-                    g.AddToPath(Package.NeroAAC.Directory)
+                    proc.AddToPath(Package.NeroAAC.Directory)
                 ElseIf cl.Contains("ffmpeg") Then
                     If cl.Contains("libfdk_aac") Then
                         proc.Package = Package.ffmpeg_non_free
@@ -825,7 +826,7 @@ Public Class GUIAudioProfile
         args += " -f null NUL"
 
         Using proc As New Proc
-            proc.Header = "Find Gain " & GetTrackIndex()
+            proc.Header = "Find Gain " & (GetTrackIndex() + 1)
             proc.SkipStrings = {"frame=", "size="}
             proc.Encoding = Encoding.UTF8
             proc.Package = Package.ffmpeg

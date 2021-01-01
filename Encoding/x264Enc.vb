@@ -46,7 +46,6 @@ Public Class x264Enc
     End Function
 
     Overrides Sub Encode()
-        p.Script.Synchronize()
         Encode("Video encoding", GetArgs(1, p.Script), s.ProcessPriority)
 
         If Params.Mode.Value = x264RateMode.TwoPass Then
@@ -61,7 +60,7 @@ Public Class x264Enc
     End Sub
 
     Overloads Sub Encode(passName As String, commandLine As String, priority As ProcessPriorityClass)
-        p.Script.Synchronize()
+        p.Script.Synchronize(avsEncoding:=TextEncoding.EncodingOfProcess)
 
         Using proc As New Proc
             proc.Package = Package.x264
@@ -110,7 +109,7 @@ Public Class x264Enc
 
         script.Filters.Add(New VideoFilter("aaa", "aaa", code))
         script.Path = (p.TempDir + p.TargetFile.Base + "_CompCheck." + script.FileType).ToShortFilePath
-        script.Synchronize()
+        script.Synchronize(avsEncoding:=TextEncoding.EncodingOfProcess)
 
         Log.WriteLine(BR + script.GetFullScript + BR)
 
@@ -536,7 +535,7 @@ Public Class x264Params
     Property PipingToolAVS As New OptionParam With {
         .Text = "Pipe",
         .Name = "PipingToolAVS",
-        .VisibleFunc = Function() p.Script.Engine = ScriptEngine.AviSynth,
+        .VisibleFunc = Function() p.Script.IsAviSynth,
         .Options = {"Automatic", "None", "avs2pipemod y4m", "avs2pipemod raw", "ffmpeg y4m", "ffmpeg raw"}}
 
     Property PipingToolVS As New OptionParam With {
@@ -992,13 +991,13 @@ Public Class x264Params
         ApplyValues(True)
 
         Dim args As String
-        Dim pipeTool = If(p.Script.Engine = ScriptEngine.AviSynth, PipingToolAVS, PipingToolVS).ValueText
+        Dim pipeTool = If(p.Script.IsAviSynth, PipingToolAVS, PipingToolVS).ValueText
 
         If includePaths AndAlso includeExecutable Then
             Dim pipeCmd = ""
 
             If pipeTool = "automatic" Then
-                If p.Script.Engine = ScriptEngine.AviSynth Then
+                If p.Script.IsAviSynth Then
                     pipeTool = "none"
                 Else
                     pipeTool = "vspipe y4m"
@@ -1078,7 +1077,7 @@ Public Class x264Params
         End If
 
         If includePaths Then
-            Dim input = If(pipeTool = "none", script.Path.ToShortFilePath.Escape, "-")
+            Dim input = If(pipeTool = "none", script.Path.Escape, "-")
             Dim dmx = Demuxer.ValueText
 
             If dmx = "automatic" Then

@@ -173,7 +173,7 @@ Public MustInherit Class Muxer
                 If v.Contains(VB6.ChrW(&HA) + VB6.ChrW(&H0) + VB6.ChrW(&HD) + VB6.ChrW(&HA)) Then
                     v = v.FixBreak
                     v = v.Replace(BR + VB6.ChrW(&H0) + BR, BR + "langidx: 0" + BR)
-                    File.WriteAllText(fp, v, Encoding.Default)
+                    v.WriteFileSystemEncoding(fp)
                 End If
             End If
 
@@ -191,7 +191,10 @@ Public MustInherit Class Muxer
 
                 For Each iSubtitle In Subtitle.Create(fp)
                     If p.PreferredSubtitles <> "" Then
-                        If fp.Contains("_forced") Then iSubtitle.Forced = True
+                        If fp.Contains("_forced") Then
+                            iSubtitle.Forced = True
+                        End If
+
                         Subtitles.Add(iSubtitle)
                     End If
                 Next
@@ -233,7 +236,10 @@ Public MustInherit Class Muxer
         For Each iDir In {p.TempDir, p.TempDir.Parent}
             For Each iExt In {"jpg", "png"}
                 Dim fp = iDir + "cover." + iExt
-                If File.Exists(fp) Then CoverFile = fp
+
+                If File.Exists(fp) Then
+                    CoverFile = fp
+                End If
             Next
         Next
 
@@ -405,7 +411,7 @@ Public Class MP4Muxer
 
     Overrides Sub Mux()
         Using proc As New Proc
-            proc.Header = "Muxing"
+            proc.Header = "Muxing to MP4"
             proc.SkipString = "|"
             proc.Package = Package.MP4Box
             proc.Arguments = GetArgs()
@@ -486,26 +492,29 @@ Public Class BatchMuxer
     End Function
 
     Overrides Sub Mux()
-        Log.WriteHeader("Batch Muxing")
+        Log.WriteHeader("Command Line Muxing")
 
-        Dim batchPath = p.TempDir + p.TargetFile.Base + "_mux.bat"
-        Dim batchCode = Proc.WriteBatchFile(batchPath, Macro.Expand(CommandLines))
+        For Each line In Macro.Expand(CommandLines.Trim).SplitLinesNoEmpty
+            Using proc As New Proc
+                proc.Header = "Command Line Muxing: " + Name
 
-        Using proc As New Proc
-            proc.Header = "Video encoding command line encoder: " + Name
-            proc.WriteLog(batchCode + BR2)
-            proc.File = "cmd.exe"
-            proc.Arguments = "/C call """ + batchPath + """"
+                If line.Contains("|") Then
+                    proc.File = "cmd.exe"
+                    proc.Arguments = "/S /C """ + line + """"
+                Else
+                    proc.CommandLine = line
+                End If
 
-            Try
-                proc.Start()
-            Catch ex As AbortException
-                Throw ex
-            Catch ex As Exception
-                g.ShowException(ex)
-                Throw New AbortException
-            End Try
-        End Using
+                Try
+                    proc.Start()
+                Catch ex As AbortException
+                    Throw ex
+                Catch ex As Exception
+                    g.ShowException(ex)
+                    Throw New AbortException
+                End Try
+            End Using
+        Next
     End Sub
 
     Overrides Function Edit() As DialogResult
@@ -597,7 +606,7 @@ Public Class MkvMuxer
         WriteTagfile()
 
         Using proc As New Proc
-            proc.Header = "Muxing"
+            proc.Header = "Muxing to MKV"
             proc.SkipStrings = {"Progress: ", "+-> Pre-parsing"}
             proc.Encoding = Encoding.UTF8
             proc.Package = Package.mkvmerge
@@ -614,7 +623,9 @@ Public Class MkvMuxer
     End Sub
 
     Sub WriteTagfile()
-        If Tags.Count = 0 Then Exit Sub
+        If Tags.Count = 0 Then
+            Exit Sub
+        End If
 
         Dim xml = <Tags>
                       <%= From tag In Tags Select

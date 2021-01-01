@@ -1,6 +1,41 @@
 
-2.1.5.4 Beta (2020-12-??)
-============
+2.1.5.6 Beta (2021-01-??)
+=========================
+
+- aomenc bugfixes and UI improvements (Dendraspis, 44vince44, [#375](/../../issues/375))
+- x265 by default no longer uses a pipe tool.
+- aomenc moved cq-level option to "Rate Control 1" for better usage (Dendraspis, Neltulz, [#411](/../../issues/411))
+- New option using the source file folder as temp file folder. (stax76)
+- Fix issue detecting default subtitle. (stax76, [#362](/../../issues/362))
+- Fix demuxed mkv subtitles not named starting at ID 1. (stax76)
+- Fix eac3to demuxed tracks not named starting at ID 1. (stax76)
+- Preferred subtitles can be defined by ID. (stax76)
+- Preferred audio tracks to demux can be defined by ID. (stax76)
+- Preferred audio and subtitle tracks in Options can be defined per menu. (stax76)
+- x265 --aq-mode option captions extended (stax76)
+- aomenc internal improvements and updates (Dendraspis)
+
+
+2.1.5.5 Beta (2020-12-30)
+=========================
+
+- Multiple AviSynth.dlls were included due to bug in release script. (stax76, 44vince44 [#407](/../../issues/407))
+- Apple QuickTime library removed.
+- The apps dialog has a feature to copy the path to the clipboard. (stax76)
+- The apps dialog has a feature to edit the user PATH environment variable. (stax76 [#305](/../../issues/305))
+- VapourSynth CAS plugin added (LSFmod dependency).
+- On Windows 10 Unicode for AviSynth is supported even when the default
+  code page is not UTF-8. This currently works for staxrip, mpv.net and x264.
+- aomenc bitrate UI fix (Dendraspis, 44vince44, [#375](/../../issues/375))
+- mpv.net 5.4.8.6
+- x264 M-0.161.3027-4121277-x64-gcc10.2.0 Patman
+- x265 M-3.4+28 gcc10.2.0 Yuuki-Asuna/msg7086/DJATOM/Patman,
+  it supports direct AviSynth and VapourSynth input which can be
+  enabled in the encoder settings: Input/Output > Pipe > None
+
+
+2.1.5.4 Beta (2020-12-27)
+=========================
 
 - Re-include "check also for new beta version" option in settings (Dendraspis)
 - Remove links from changelog when checking for new versions (Dendraspis)
@@ -8,10 +43,15 @@
 - New macros %video_encoder_settings% and %app_version:name% (stax76, [#367](/../../issues/367))
 - New command `AddTags` for adding mkv tags. (stax76, [#367](/../../issues/367))
 - aomenc default params updated and some fixes (Dendraspis, 44vince44, [#375](/../../issues/375))
+- A tool can now have multiple download URLs. (stax76, [#400](/../../issues/400))
+- Apps dialog links to a new [x265 wiki page](https://github.com/staxrip/staxrip/wiki/x265). (stax76, [#400](/../../issues/400))
+- aomenc 2.0.1-1118-gbe4ee75fd-x64-msvc1929 Patman
+- ffmpeg N-100448-gab6a56773f-x64-gcc10.2.0 Patman
+- mp4box 1.1.0-DEV-rev384-gf9e004333-x64-gcc10.2.0 Patman
 
 
 2.1.5.3 Beta (2020-12-19)
-============
+=========================
 
 - Stop saving empty log files (Dendraspis)
 - aomenc options reorganized, restructured and refreshed (Dendraspis, Neltulz, [#375](/../../issues/375))
@@ -32,7 +72,7 @@
 
 
 2.1.5.2 Beta (2020-12-15)
-============
+=========================
 
 - StaxRip authors in about page updated. (stax76)
 - Fix progress bar not working for rav1e encoder. (stax76)
@@ -59,7 +99,7 @@
 
 
 2.1.5.1 Beta (2020-12-15)
-============
+=========================
 
 - Job processing issue fix (stax76, 44vince44, [#381](/../../issues/381))
 - Audio filename collision fix (stax76, Dendraspis, 44vince44, [#386](/../../issues/386), [#380](/../../issues/380), [#297](/../../issues/297))
@@ -76,7 +116,7 @@
 
 
 2.1.4.9 Beta (2020-12-13)
-============
+=========================
 
 - Set the current directory of the StaxRip process to the working.
   directory of the current project. (stax76, 44vince44, [#388](/../../issues/388))

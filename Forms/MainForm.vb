@@ -6,7 +6,7 @@ Imports System.Text
 Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports System.Threading.Tasks
-
+Imports Microsoft.Win32
 Imports StaxRip.UI
 Imports VB6 = Microsoft.VisualBasic
 
@@ -1799,7 +1799,7 @@ Public Class MainForm
             AddSourceFilters({"d2vsource"}, filters)
         End If
 
-        If p.Script.Engine = ScriptEngine.AviSynth Then
+        If p.Script.IsAviSynth Then
             filters = filters.Where(Function(filter) Not filter.Script.Replace(" ", "").Contains("clip=core.")).ToList
             filters.Insert(0, New VideoFilter("Source", "Automatic", "#avs"))
         Else
@@ -1809,7 +1809,7 @@ Public Class MainForm
 
         Dim td As New TaskDialog(Of VideoFilter)
 
-        If p.Script.Engine = ScriptEngine.AviSynth Then
+        If p.Script.IsAviSynth Then
             td.MainInstruction = "Select a AviSynth source filter."
         Else
             td.MainInstruction = "Select a VapourSynth source filter."
@@ -1928,7 +1928,7 @@ Public Class MainForm
 
             If p.SourceFile.Ext.EqualsAny(FileTypes.Image) Then
                 If p.SourceFile.Base(p.SourceFile.Base.Length - 1).IsDigit Then
-                    If p.Script.Engine = ScriptEngine.AviSynth Then
+                    If p.Script.IsAviSynth Then
                         Dim digitCount = 0
 
                         For i = p.SourceFile.Base.Length - 1 To 0 Step -1
@@ -1989,7 +1989,7 @@ Public Class MainForm
                         Throw New AbortException
                     End If
 
-                    If p.Script.Engine = ScriptEngine.AviSynth Then
+                    If p.Script.IsAviSynth Then
                         p.Script = VideoScript.GetDefaults()(1)
                     End If
                 Else
@@ -2141,7 +2141,7 @@ Public Class MainForm
 
             s.LastSourceDir = p.SourceFile.Dir
 
-            If p.SourceFile.Ext = "avs" AndAlso p.Script.Engine = ScriptEngine.AviSynth Then
+            If p.SourceFile.Ext = "avs" AndAlso p.Script.IsAviSynth Then
                 p.Script.Filters.Clear()
                 p.Script.Filters.Add(New VideoFilter("Source", "AVS Script Import", "Import(""" + p.SourceFile + """)"))
             ElseIf p.SourceFile.Ext = "vpy" Then
@@ -2189,7 +2189,7 @@ Public Class MainForm
 
                         If film >= 95 Then
                             content = content.Replace("Field_Operation=0" + BR + "Frame_Rate=29970 (30000/1001)", "Field_Operation=1" + BR + "Frame_Rate=23976 (24000/1001)")
-                            content.WriteFileDefault(p.SourceFile)
+                            content.WriteFileSystemEncoding(p.SourceFile)
                         End If
                     End If
                 End If
@@ -2198,7 +2198,6 @@ Public Class MainForm
             Dim errorMsg = ""
 
             Try
-                p.SourceScript.Synchronize()
                 errorMsg = p.SourceScript.GetError
             Catch ex As Exception
                 errorMsg = ex.Message
@@ -2292,7 +2291,7 @@ Public Class MainForm
             Dim isCropActive = p.Script.IsFilterActive("Crop")
 
             If isCropActive AndAlso (p.CropLeft Or p.CropTop Or p.CropRight Or p.CropBottom) = 0 Then
-                p.SourceScript.Synchronize(True, True, True)
+                p.SourceScript.Synchronize(True, True, True, TextEncoding.EncodingOfProcess)
 
                 Using proc As New Proc
                     proc.Header = "Auto Crop"
@@ -2359,10 +2358,9 @@ Public Class MainForm
             Exit Sub
         End If
 
-        Dim profiles = If(p.Script.Engine = ScriptEngine.AviSynth,
-            s.AviSynthProfiles, s.VapourSynthProfiles)
+        Dim profiles = If(p.Script.IsAviSynth, s.AviSynthProfiles, s.VapourSynthProfiles)
 
-        Dim preferences = If(p.Script.Engine = ScriptEngine.AviSynth,
+        Dim preferences = If(p.Script.IsAviSynth,
             s.AviSynthFilterPreferences, s.VapourSynthFilterPreferences)
 
         Dim sourceFilter = p.Script.GetFilter("Source")
@@ -2372,7 +2370,7 @@ Public Class MainForm
         SetSourceFilter(sourceFilter, preferences, profiles, True, False, False, True)
         SetSourceFilter(sourceFilter, preferences, profiles, False, False, False, False)
 
-        Dim editAVS = p.Script.Engine = ScriptEngine.AviSynth AndAlso p.SourceFile.Ext <> "avs"
+        Dim editAVS = p.Script.IsAviSynth AndAlso p.SourceFile.Ext <> "avs"
         Dim editVS = p.Script.Engine = ScriptEngine.VapourSynth AndAlso p.SourceFile.Ext <> "vpy"
 
         If editAVS Then
@@ -2527,7 +2525,7 @@ Public Class MainForm
                 If idxContent.Contains(VB6.ChrW(&HA) + VB6.ChrW(&H0) + VB6.ChrW(&HD) + VB6.ChrW(&HA)) Then
                     idxContent = idxContent.FixBreak
                     idxContent = idxContent.Replace(BR + VB6.ChrW(&H0) + BR, BR + "langidx: 0" + BR)
-                    File.WriteAllText(path, idxContent, Encoding.Default)
+                    idxContent.WriteFileSystemEncoding(path)
                 End If
 
                 Using proc As New Proc
@@ -2587,7 +2585,7 @@ Public Class MainForm
                             "CLOSE"
 
                         Dim fileContent = p.TempDir + p.TargetFile.Base + "_vsrip.txt"
-                        args.WriteFileDefault(fileContent)
+                        args.WriteFileSystemEncoding(fileContent)
 
                         Using proc As New Proc
                             proc.Header = "Demux subtitles using VSRip"
@@ -2799,6 +2797,22 @@ Public Class MainForm
         End If
 
         If Not p.BatchMode Then
+            If p.SourceFile <> "" Then
+                If p.Script.IsAviSynth AndAlso Not TextEncoding.IsSystemUTF8 AndAlso
+                    Not (TextEncoding.AvsEncoderSupportsUTF8 AndAlso OSVersion.Current >= OSVersion.Windows10) AndAlso
+                    Not TextEncoding.IsPathSupportedBySystemEncoding(p.SourceFile) Then
+
+                    If ProcessTip(If(OSVersion.Current >= OSVersion.Windows10,
+                        "The current AviSynth video encoder does not support Unicode, consider to enable UTF-8 in the administrative language settings of Windows 10.",
+                        "The current AviSynth video encoder does not support Unicode on systems older than Windows 10.")) Then
+
+                        gbAssistant.Text = "Text Encoding Limitation"
+                        CanIgnoreTip = False
+                        Return False
+                    End If
+                End If
+            End If
+
             If p.Script.Filters.Count = 0 OrElse
                 Not p.Script.Filters(0).Active OrElse
                 p.Script.Filters(0).Category <> "Source" Then
@@ -2939,7 +2953,8 @@ Public Class MainForm
                 End If
 
                 If Not p.Script.IsFilterActive("Cutting") AndAlso Form.ActiveForm Is Me Then
-                    If ProcessTip("The cutting filter settings don't match with the cutting settings used in the preview.") Then
+                    If ProcessTip("The cutting filter settings don't match with the cutting settings used in the preview." + BR +
+                                  "This can usually be fixed by opening and closing the preview.") Then
                         gbAssistant.Text = "Invalid Cutting Settings"
                         CanIgnoreTip = False
                         Return False
@@ -2972,6 +2987,22 @@ Public Class MainForm
                         gbAssistant.Text = "Target File"
                         Return False
                     End If
+                End If
+            End If
+
+            If p.Script.IsAviSynth AndAlso TypeOf p.VideoEncoder Is x264Enc AndAlso
+                p.Script.Info.ColorSpace <> ColorSpace.YUV420P8 AndAlso
+                p.Script.Info.ColorSpace <> ColorSpace.YUV422P8 AndAlso
+                p.Script.Info.ColorSpace <> ColorSpace.YUV444P8 AndAlso
+                p.Script.Info.ColorSpace <> ColorSpace.BGR32 AndAlso
+                Not g.ContainsPipeTool(p.VideoEncoder.GetCommandLine(True, True)) Then
+
+                If ProcessTip("x264 AviSynth input supports only YUV420P8, YUV422P8, YUV444P8 and BGR32 " +
+                             $"as input colorspace.{BR}Consider to use a pipe tool: " +
+                              "x264 Options > Input/Output > Pipe > avs2pipemod y4m") Then
+                    gbAssistant.Text = "Incompatible colorspace"
+                    CanIgnoreTip = False
+                    Return False
                 End If
             End If
 
@@ -3077,14 +3108,6 @@ Public Class MainForm
 
     Sub AudioTextChanged(tb As TextBox, ap As AudioProfile)
         If BlockAudioTextChanged Then
-            Exit Sub
-        End If
-
-        If System.Text.Encoding.Default.CodePage <> 65001 AndAlso
-            Not tb.Text.IsANSICompatible AndAlso p.Script.Engine = ScriptEngine.AviSynth Then
-
-            MsgWarn(Strings.NoUnicode)
-            tb.Text = ""
             Exit Sub
         End If
 
@@ -3271,7 +3294,7 @@ Public Class MainForm
                     proc.Encoding = Encoding.UTF8
                     proc.SkipString = "Creating lwi"
 
-                    If p.Script.Engine = ScriptEngine.AviSynth Then
+                    If p.Script.IsAviSynth Then
                         proc.File = Package.ffmpeg.Path
                         proc.Arguments = "-i " + p.Script.Path.Escape + " -hide_banner"
                     Else
@@ -3460,7 +3483,7 @@ Public Class MainForm
 
             b = ui.AddBool()
             b.Text = "Enable tooltips in menus (restart required)"
-            b.Help = "If you disable this you can still right-click menu items to show the tooltip."
+            b.Help = "Tooltips can always be shown by right-clicking menu items."
             b.Field = NameOf(s.EnableTooltips)
 
             '############# Preprocessing
@@ -3541,18 +3564,6 @@ Public Class MainForm
             b = ui.AddBool
             b.Text = "Verify tool status"
             b.Field = NameOf(s.VerifyToolStatus)
-
-            n = ui.AddNum
-            n.Text = "Character limit for folders"
-            n.Help = "Character limit of source file folder paths. Windows does not have usable long path support."
-            n.Config = {50, 900, 10}
-            n.Field = NameOf(s.CharacterLimitFolder)
-
-            n = ui.AddNum
-            n.Text = "Character limit for filenames"
-            n.Help = "Windows does not have usable long path support."
-            n.Config = {20, 200, 10}
-            n.Field = NameOf(s.CharacterLimitFilename)
 
             ui.SelectLast("last settings page")
 
@@ -3810,7 +3821,7 @@ Public Class MainForm
             End If
 
             If Not g.EnableFilter("Crop") Then
-                If p.Script.Engine = ScriptEngine.AviSynth Then
+                If p.Script.IsAviSynth Then
                     p.Script.InsertAfter("Source", New VideoFilter("Crop", "Crop", "Crop(%crop_left%, %crop_top%, -%crop_right%, -%crop_bottom%)"))
                 Else
                     p.Script.InsertAfter("Source", New VideoFilter("Crop", "Crop", "clip = core.std.Crop(clip, %crop_left%, %crop_right%, %crop_top%, %crop_bottom%)"))
@@ -3906,7 +3917,7 @@ Public Class MainForm
         Optional position As Integer = -1)
 
         If Not CanIgnoreTip Then
-            MsgWarn("The current assistant warning cannot be skipped.")
+            MsgWarn("Assistant warning cannot be skipped.")
             Exit Sub
         End If
 
@@ -4193,10 +4204,29 @@ Public Class MainForm
 
             Dim audioPage = ui.CreateFlowPage("Audio", True)
 
-            t = ui.AddText
-            t.Text = "Preferred Languages"
-            t.Help = "Preferred audio languages using [http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes two or three letter language code] separated by space, comma or semicolon. For all languages just enter 'all'." + BR2 + String.Join(BR, From i In Language.Languages Where i.IsCommon Select i.ToString + ": " + i.TwoLetterCode + ", " + i.ThreeLetterCode)
-            t.Field = NameOf(p.PreferredAudio)
+            Dim prefAudio = ui.AddTextMenu
+            prefAudio.Text = "Preferred Languages"
+            prefAudio.Help = "List of audio tracks to demux."
+            prefAudio.Field = NameOf(p.PreferredAudio)
+
+            For x = 1 To 9
+                Dim temp = x
+                prefAudio.AddMenu("Choose ID | " & x, Sub() prefAudio.Edit.Text += " " & temp)
+            Next
+
+            prefAudio.AddMenu("Choose All", "all")
+            prefAudio.AddMenu("-", "")
+
+            For Each lng In Language.Languages
+                If lng.IsCommon Then
+                    prefAudio.AddMenu(lng.ToString + " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                        Sub() prefAudio.Edit.Text += " " + lng.ThreeLetterCode)
+                Else
+                    prefAudio.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
+                        " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                        Sub() prefAudio.Edit.Text += " " + lng.ThreeLetterCode)
+                End If
+            Next
 
             Dim cut = ui.AddMenu(Of CuttingMode)
             cut.Text = "Cutting Method"
@@ -4256,6 +4286,7 @@ Public Class MainForm
             b.Help = "Imports VUI metadata such as HDR from the source file to the video encoder."
             b.Field = NameOf(p.ImportVUIMetadata)
 
+            'TODO: added by Revan, needs research
             b = ui.AddBool()
             b.Text = "HDR Ingest"
             b.Help = "Adds the Remaining Metadata Required to be Compliant to HDR10 or HLG Standards"
@@ -4263,10 +4294,29 @@ Public Class MainForm
 
             Dim subPage = ui.CreateFlowPage("Subtitles", True)
 
-            t = ui.AddText(subPage)
-            t.Text = "Preferred Languages"
-            t.Help = "Subtitles demuxed and loaded automatically using [http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes two or three letter language code] separated by space, comma or semicolon. For all subtitles just enter all." + BR2 + String.Join(BR, From i In Language.Languages Where i.IsCommon Select i.ToString + ": " + i.TwoLetterCode + ", " + i.ThreeLetterCode)
-            t.Field = NameOf(p.PreferredSubtitles)
+            Dim prefSub = ui.AddTextMenu(subPage)
+            prefSub.Text = "Preferred Languages"
+            prefSub.Help = "List of subtitles demuxed and loaded automatically."
+            prefSub.Field = NameOf(p.PreferredSubtitles)
+
+            For x = 1 To 9
+                Dim temp = x
+                prefSub.AddMenu("Choose ID | " & x, Sub() prefSub.Edit.Text += " " & temp)
+            Next
+
+            prefSub.AddMenu("Choose All", "all")
+            prefSub.AddMenu("-", "")
+
+            For Each lng In Language.Languages
+                If lng.IsCommon Then
+                    prefSub.AddMenu(lng.ToString + " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                        Sub() prefSub.Edit.Text += " " + lng.ThreeLetterCode)
+                Else
+                    prefSub.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
+                        " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                        Sub() prefSub.Edit.Text += " " + lng.ThreeLetterCode)
+                End If
+            Next
 
             Dim tbm = ui.AddTextMenu(subPage)
             tbm.Text = "Track Name"
@@ -4407,6 +4457,11 @@ Public Class MainForm
             b.Checked = p.ExtractTimestamps
             b.SaveAction = Sub(value) p.ExtractTimestamps = value
 
+            b = ui.AddBool(miscPage)
+            b.Text = "Use source file folder for temp files"
+            b.Checked = p.NoTempDir
+            b.SaveAction = Sub(value) p.NoTempDir = value
+
             ui.AddLine(miscPage, "Compressibility Check")
 
             b = ui.AddBool(miscPage)
@@ -4517,8 +4572,8 @@ Public Class MainForm
 
     <Command("Dialog to configure AviSynth filter profiles.")>
     Sub ShowFilterProfilesDialog()
-        Dim filterProfiles = If(p.Script.Engine = ScriptEngine.AviSynth, s.AviSynthProfiles, s.VapourSynthProfiles)
-        Dim getDefaults = If(p.Script.Engine = ScriptEngine.AviSynth, Function() FilterCategory.GetAviSynthDefaults, Function() FilterCategory.GetVapourSynthDefaults)
+        Dim filterProfiles = If(p.Script.IsAviSynth, s.AviSynthProfiles, s.VapourSynthProfiles)
+        Dim getDefaults = If(p.Script.IsAviSynth, Function() FilterCategory.GetAviSynthDefaults, Function() FilterCategory.GetVapourSynthDefaults)
 
         Using dialog As New MacroEditorDialog
             dialog.SetScriptDefaults()
@@ -4714,7 +4769,7 @@ Public Class MainForm
                     End If
 
                     Regex.Replace(dialog.FileName.ReadAllText, "langidx: \d+", "langidx: " +
-                                  sb.SelectedValue.IndexIDX.ToString).WriteFileDefault(dialog.FileName)
+                                  sb.SelectedValue.IndexIDX.ToString).WriteFileSystemEncoding(dialog.FileName)
                 End If
 
                 p.AddHardcodedSubtitleFilter(dialog.FileName, True)
@@ -4731,7 +4786,7 @@ Public Class MainForm
         SkipAssistant = True
 
         If Not g.EnableFilter("Resize") Then
-            If p.Script.Engine = ScriptEngine.AviSynth Then
+            If p.Script.IsAviSynth Then
                 p.Script.AddFilter(New VideoFilter("Resize", "BicubicResize", "BicubicResize(%target_width%, %target_height%, 0, 0.5)"))
             Else
                 p.Script.AddFilter(New VideoFilter("Resize", "Bicubic", "clip = core.resize.Bicubic(clip, %target_width%, %target_height%)"))

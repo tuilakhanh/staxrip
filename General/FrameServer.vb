@@ -153,7 +153,7 @@ Public Class FrameServerFactory
             Package.VapourSynth.Directory,
             Package.AviSynth.Directory,
             Package.FFTW.Directory,
-            Package.VisualCpp2019.Directory)
+            Folder.Startup + "Apps\Support\VC")
 
         If (path.Ext = "avs" AndAlso s.AviSynthMode = FrameServerMode.VFW) OrElse
            (path.Ext = "vpy" AndAlso s.VapourSynthMode = FrameServerMode.VFW) Then
@@ -439,7 +439,7 @@ Public Class FrameServerHelp
     End Function
 
     Shared Function IsAviSynthUsed() As Boolean
-        Return p.Script.Engine = ScriptEngine.AviSynth
+        Return p.Script.IsAviSynth
     End Function
 
     Shared Function IsVapourSynthUsed() As Boolean

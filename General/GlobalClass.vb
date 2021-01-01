@@ -4,7 +4,6 @@ Imports System.Drawing.Imaging
 Imports System.Globalization
 Imports System.Management.Automation
 Imports System.Runtime.ExceptionServices
-Imports System.Runtime.InteropServices
 Imports System.Security.Principal
 Imports System.Text
 Imports System.Text.RegularExpressions
@@ -435,16 +434,19 @@ Public Class GlobalClass
 
     Function VerifySource(files As IEnumerable(Of String)) As Boolean
         For Each file In files
-            If Encoding.Default.CodePage <> 65001 AndAlso
-                Not file.IsANSICompatible AndAlso p.Script.Engine = ScriptEngine.AviSynth Then
-
-                MsgError(Strings.NoUnicode)
+            If Not file.IsProcessEncodingCompatible AndAlso p.Script.IsAviSynth Then
+                ShowAviSynthUnicodeError()
                 Return False
             End If
         Next
 
         Return True
     End Function
+
+    Sub ShowAviSynthUnicodeError()
+        MsgError($"Unicode filenames are not supported by AviSynth unless Windows 10 is used." + BR2 +
+                 $"Rename the file or enable VapourSynth:{BR2}Filters > Filter Setup > VapourSynth")
+    End Sub
 
     Sub PlayAudio(ap As AudioProfile)
         If FileTypes.AudioRaw.Contains(ap.File.Ext) Then
@@ -513,7 +515,7 @@ Public Class GlobalClass
             Exit Sub
         End If
 
-        script.Synchronize()
+        script.Synchronize(avsEncoding:=TextEncoding.EncodingOfProcess)
         Dim args As String
 
         If script.Engine = ScriptEngine.VapourSynth Then
@@ -806,37 +808,41 @@ Public Class GlobalClass
 
     Sub SetTempDir()
         If p.SourceFile <> "" Then
-            p.TempDir = Macro.Expand(p.TempDir)
+            If p.NoTempDir Then
+                p.TempDir = p.SourceFile.Dir
+            Else
+                p.TempDir = Macro.Expand(p.TempDir)
 
-            If p.TempDir = "" Then
-                If p.SourceFile.Dir.EndsWith("_temp\") Then
-                    p.TempDir = p.SourceFile.Dir
-                Else
-                    p.TempDir = p.SourceFile.Dir + p.SourceFile.Base + "_temp\"
+                If p.TempDir = "" Then
+                    If p.SourceFile.Dir.EndsWith("_temp\") Then
+                        p.TempDir = p.SourceFile.Dir
+                    Else
+                        p.TempDir = p.SourceFile.Dir + p.SourceFile.Base + "_temp\"
+                    End If
                 End If
-            End If
 
-            p.TempDir = p.TempDir.FixDir
+                p.TempDir = p.TempDir.FixDir
 
-            If Not Directory.Exists(p.TempDir) Then
-                Try
-                    Directory.CreateDirectory(p.TempDir)
-                Catch
+                If Not Directory.Exists(p.TempDir) Then
                     Try
-                        p.TempDir = p.SourceFile.DirAndBase + "_temp\"
-
-                        If Not Directory.Exists(p.TempDir) Then
-                            Directory.CreateDirectory(p.TempDir)
-                        End If
+                        Directory.CreateDirectory(p.TempDir)
                     Catch
-                        MsgWarn("Failed to create a temp directory. By default it's created " +
-                                "in the directory of the source file so it's not possible " +
-                                "to open files directly from a optical drive unless a temp directory  " +
-                                "is defined in the options. Usually discs are copied to the hard drive " +
-                                "first using a application like MakeMKV, DVDFab or AnyDVD.")
-                        Throw New AbortException
+                        Try
+                            p.TempDir = p.SourceFile.DirAndBase + "_temp\"
+
+                            If Not Directory.Exists(p.TempDir) Then
+                                Directory.CreateDirectory(p.TempDir)
+                            End If
+                        Catch
+                            MsgWarn("Failed to create a temp directory. By default it's created " +
+                                    "in the directory of the source file so it's not possible " +
+                                    "to open files directly from a optical drive unless a temp directory  " +
+                                    "is defined in the options. Usually discs are copied to the hard drive " +
+                                    "first using a application like MakeMKV, DVDFab or AnyDVD.")
+                            Throw New AbortException
+                        End Try
                     End Try
-                End Try
+                End If
             End If
 
             Folder.Current = p.TempDir
@@ -1263,7 +1269,7 @@ Public Class GlobalClass
     End Sub
 
     Sub RunAutoCrop(progressAction As Action(Of Double))
-        p.SourceScript.Synchronize(True, True, True)
+        p.SourceScript.Synchronize(True, True, True, TextEncoding.EncodingOfProcess)
 
         Using server = FrameServerFactory.Create(p.SourceScript.Path)
             Dim len = server.Info.FrameCount \ (s.CropFrameCount + 1)
@@ -1532,6 +1538,12 @@ Public Class GlobalClass
             Return ret
         Else
             Return "clip = " + ret
+        End If
+    End Function
+
+    Function ContainsPipeTool(value As String) As Boolean
+        If value <> "" Then
+            Return value.Contains("ffmpeg") OrElse value.Contains("avs2pipemod") OrElse value.Contains("vspipe")
         End If
     End Function
 End Class

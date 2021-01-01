@@ -117,8 +117,14 @@ Public Class x265Enc
             proc.Encoding = Encoding.UTF8
             proc.Priority = priority
             proc.SkipString = "%] "
-            proc.File = "cmd.exe"
-            proc.Arguments = "/S /C """ + commandLine + """"
+
+            If commandLine.Contains("|") Then
+                proc.File = "cmd.exe"
+                proc.Arguments = "/S /C """ + commandLine + """"
+            Else
+                proc.CommandLine = commandLine
+            End If
+
             proc.Start()
         End Using
     End Sub
@@ -317,14 +323,14 @@ Public Class x265Params
     Property PipingToolAVS As New OptionParam With {
         .Text = "Pipe",
         .Name = "PipingToolAVS",
-        .VisibleFunc = Function() p.Script.Engine = ScriptEngine.AviSynth,
-        .Options = {"Automatic", "None", "avs2pipemod", "ffmpeg"}}
+        .VisibleFunc = Function() p.Script.IsAviSynth,
+        .Options = {"None", "avs2pipemod", "ffmpeg"}}
 
     Property PipingToolVS As New OptionParam With {
         .Text = "Pipe",
         .Name = "PipingToolVS",
         .VisibleFunc = Function() p.Script.Engine = ScriptEngine.VapourSynth,
-        .Options = {"Automatic", "None", "vspipe", "ffmpeg"}}
+        .Options = {"None", "vspipe", "ffmpeg"}}
 
     Property chunkStart As New NumParam With {
         .Switch = "--chunk-start",
@@ -466,7 +472,7 @@ Public Class x265Params
         .Switch = "--aq-mode",
         .Text = "AQ Mode",
         .IntegerValue = True,
-        .Options = {"Disabled", "AQ", "AQ Auto-variance", "AQ Auto-variance with bias to dark scenes", "AQ Auto-variance and edge information"}}
+        .Options = {"0: Disabled", "1: AQ enabled", "2: AQ enabled with auto-variance", "3: AQ enabled with auto-variance with bias to dark scenes", "4: AQ enabled with auto-variance and edge information"}}
 
     Property AQStrength As New NumParam With {
         .Switch = "--aq-strength",
@@ -1159,7 +1165,7 @@ Public Class x265Params
         ApplyTuneDefaultValues()
 
         Dim sb As New StringBuilder
-        Dim pipeTool = If(p.Script.Engine = ScriptEngine.AviSynth, PipingToolAVS, PipingToolVS).ValueText
+        Dim pipeTool = If(p.Script.IsAviSynth, PipingToolAVS, PipingToolVS).ValueText
 
         If includePaths AndAlso includeExecutable Then
             Dim isCropped = CInt(p.CropLeft Or p.CropTop Or p.CropRight Or p.CropBottom) <> 0 AndAlso
@@ -1170,7 +1176,7 @@ Public Class x265Params
                     Dim pipeString = ""
 
                     If pipeTool = "automatic" OrElse endFrame <> 0 Then
-                        If p.Script.Engine = ScriptEngine.AviSynth Then
+                        If p.Script.IsAviSynth Then
                             pipeTool = "avs2pipemod"
                         Else
                             pipeTool = "vspipe"

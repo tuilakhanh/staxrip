@@ -137,6 +137,12 @@ Public Class MediaInfo
                         Case DemuxMode.Preferred, DemuxMode.Dialog
                             Dim autoCode = p.PreferredAudio.ToLower.SplitNoEmptyAndWhiteSpace(",", ";", " ")
                             at.Enabled = autoCode.ContainsAny("all", at.Language.TwoLetterCode, at.Language.ThreeLetterCode)
+
+                            For Each i In autoCode
+                                If i.IsInt AndAlso i.ToInt = (index + 1) Then
+                                    at.Enabled = True
+                                End If
+                            Next
                     End Select
 
                     ret.Add(at)
@@ -172,12 +178,23 @@ Public Class MediaInfo
                     subtitle.ID = GetText(index, "ID").ToInt
                     subtitle.Title = GetText(index, "Title").Trim
                     subtitle.CodecString = GetText(index, "Codec/String")
-                    If subtitle.CodecString = "" Then subtitle.CodecString = GetText(index, "Format")
+
+                    If subtitle.CodecString = "" Then
+                        subtitle.CodecString = GetText(index, "Format")
+                    End If
+
                     subtitle.Format = GetText(index, "Format")
                     subtitle.Size = GetText(index, "StreamSize").ToInt
 
                     Dim autoCode = p.PreferredSubtitles.ToLower.SplitNoEmptyAndWhiteSpace(",", ";", " ")
-                    subtitle.Enabled = autoCode.ContainsAny("all", subtitle.Language.TwoLetterCode, subtitle.Language.ThreeLetterCode) OrElse p.DemuxSubtitles = DemuxMode.All
+                    subtitle.Enabled = autoCode.ContainsAny("all", subtitle.Language.TwoLetterCode,
+                        subtitle.Language.ThreeLetterCode) OrElse p.DemuxSubtitles = DemuxMode.All
+
+                    For Each i In autoCode
+                        If i.IsInt AndAlso i.ToInt = (index + 1) Then
+                            subtitle.Enabled = True
+                        End If
+                    Next
 
                     ret.Add(subtitle)
                 Next
@@ -373,9 +390,16 @@ Public Class MediaInfo
     Shared Cache As New Dictionary(Of String, MediaInfo)
 
     Shared Function GetMediaInfo(path As String) As MediaInfo
-        If path = "" Then Return Nothing
+        If path = "" Then
+            Return Nothing
+        End If
+
         Dim key = path & File.GetLastWriteTime(path).Ticks
-        If Cache.ContainsKey(key) Then Return Cache(key)
+
+        If Cache.ContainsKey(key) Then
+            Return Cache(key)
+        End If
+
         Dim ret As New MediaInfo(path)
         Cache(key) = ret
         Return ret
