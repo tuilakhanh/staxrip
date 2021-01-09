@@ -450,6 +450,7 @@ Public Class AppsForm
         SetupButton.Visible = Not CurrentPackage.SetupAction Is Nothing AndAlso CurrentPackage.GetStatus <> ""
 
         tsbExplore.Enabled = path <> ""
+        miCopyPath.Enabled = path <> ""
         tsbLaunch.Enabled = Not CurrentPackage.LaunchAction Is Nothing AndAlso CurrentPackage.Path <> ""
         miLaunch.Enabled = tsbLaunch.Enabled
         tsbDownload.Enabled = CurrentPackage.DownloadURL <> "" OrElse Not CurrentPackage.DownloadURLs Is Nothing
@@ -811,7 +812,9 @@ Public Class AppsForm
                     dialog.FileName.ToLowerEx.StartsWithEx(Folder.Startup.ToLowerEx) AndAlso
                     Not dialog.FileName.ToLowerEx.StartsWithEx(Folder.Settings.ToLowerEx) Then
 
-                    MsgError("Custom paths within the startup folder are not permitted.")
+                    MsgError("Custom paths within the startup folder are not permitted " +
+                             "because it would prevent a simple update process." + BR2 +
+                             "Please put the file somewhere else outside the startup folder.")
                     Exit Sub
                 End If
 

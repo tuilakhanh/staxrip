@@ -6,7 +6,7 @@ Imports System.Text
 Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports System.Threading.Tasks
-Imports Microsoft.Win32
+
 Imports StaxRip.UI
 Imports VB6 = Microsoft.VisualBasic
 
@@ -2063,6 +2063,7 @@ Public Class MainForm
             p.SourceColorSpace = MediaInfo.GetVideo(p.LastOriginalSourceFile, "ColorSpace")
             p.SourceChromaSubsampling = MediaInfo.GetVideo(p.LastOriginalSourceFile, "ChromaSubsampling")
             p.SourceSize = New FileInfo(p.LastOriginalSourceFile).Length
+            p.SourceVideoSize = MediaInfo.GetVideo(p.LastOriginalSourceFile, "StreamSize").ToLong()
             p.SourceBitrate = CInt(MediaInfo.GetVideo(p.LastOriginalSourceFile, "BitRate").ToInt / 1000)
             p.SourceScanType = MediaInfo.GetVideo(p.LastOriginalSourceFile, "ScanType")
             p.SourceScanOrder = MediaInfo.GetVideo(p.LastOriginalSourceFile, "ScanOrder")
@@ -2405,16 +2406,10 @@ Public Class MainForm
         If p.SourceChromaSubsampling <> "4:2:0" AndAlso s.ConvertChromaSubsampling Then
             If editVS Then
                 Dim sourceHeight = MediaInfo.GetVideo(p.LastOriginalSourceFile, "Height").ToInt
-                Dim matrix As String
-
-                If sourceHeight = 0 OrElse sourceHeight > 576 Then
-                    matrix = "709"
-                Else
-                    matrix = "470bg"
-                End If
-
-                'TODO: 10 bit support 
-                p.Script.GetFilter("Source").Script += BR + "clip = clip.resize.Bicubic(matrix_s = '" + matrix + "', format = vs.YUV420P8)"
+                Dim matrix = If(sourceHeight = 0 OrElse sourceHeight > 576, "709", "470bg")
+                Dim format = If(p.SourceVideoBitDepth = 10, "YUV420P10", "YUV420P8")
+                p.Script.GetFilter("Source").Script += BR + "clip = clip.resize.Bicubic(matrix_s = '" +
+                    matrix + $"', format = vs.{format})"
             ElseIf editAVS AndAlso Not sourceFilter.Script.ContainsAny("ConvertToYV12", "ConvertToYUV420") AndAlso
                 Not sourceFilter.Script.Contains("ConvertToYUV420") Then
 
@@ -2679,14 +2674,9 @@ Public Class MainForm
         Dim isValidAnamorphicSize = (p.TargetWidth = 1440 AndAlso p.TargetHeight = 1080) OrElse
             (p.TargetWidth = 960 AndAlso p.TargetHeight = 720)
 
-        If Not isResized Then
-            If p.TargetWidth <> cropw Then
-                tbTargetWidth.Text = cropw.ToString
-            End If
-
-            If p.TargetHeight <> croph Then
-                tbTargetHeight.Text = croph.ToString
-            End If
+        If p.Script.Info.Width <> 0 AndAlso Not isResized Then
+            tbTargetWidth.Text = p.Script.Info.Width.ToString
+            tbTargetHeight.Text = p.Script.Info.Height.ToString
         End If
 
         lAspectRatioError.Text = Calc.GetAspectRatioError.ToString("f2") + "%"
@@ -2730,21 +2720,27 @@ Public Class MainForm
         lSourcePAR.Text = par.X & ":" & par.Y
 
         If p.SourceSeconds > 0 Then
+            Dim size = If(p.SourceVideoSize > 0, p.SourceVideoSize, p.SourceSize)
+            Dim sizeText = If(size / 1024 ^ 2 < 1024, CInt(size / 1024 ^ 2).ToString + "MiB", (size / 1024 ^ 3).ToString("f1") + "GiB")
+            If size <> p.SourceVideoSize Then
+                sizeText = $"[{sizeText}]"
+            End If
+
             lSource1.Text = lSource1.GetMaxTextSpace(
                 g.GetTimeString(p.SourceSeconds),
-                If(p.SourceSize / 1024 ^ 2 < 1024, CInt(p.SourceSize / 1024 ^ 2).ToString + "MB",
-                (p.SourceSize / 1024 ^ 3).ToString("f1") + "GB"),
+                sizeText,
                 If(p.SourceBitrate > 0, (p.SourceBitrate / 1000).ToString("f1") + "Mb/s", ""),
                 p.SourceFrameRate.ToString.Shorten(9) + "fps",
                 p.SourceVideoFormat, p.SourceVideoFormatProfile)
 
             lSource2.Text = lSource1.GetMaxTextSpace(
-                p.SourceWidth.ToString + "x" + p.SourceHeight.ToString, p.SourceColorSpace,
-                p.SourceChromaSubsampling, If(p.SourceVideoBitDepth <> 0, p.SourceVideoBitDepth & "Bits", ""),
-                p.SourceScanType, If(p.SourceScanType = "Interlaced", p.SourceScanOrder, ""))
+                    p.SourceWidth.ToString + "x" + p.SourceHeight.ToString, p.SourceColorSpace,
+                    p.SourceChromaSubsampling, If(p.SourceVideoBitDepth <> 0, p.SourceVideoBitDepth & "Bits", ""),
+                    p.SourceScanType, If(p.SourceScanType = "Interlaced", p.SourceScanOrder, ""))
 
             lTarget1.Text = lSource1.GetMaxTextSpace(g.GetTimeString(p.TargetSeconds),
-                p.TargetFrameRate.ToString.Shorten(9) + "fps", "Audio Bitrate: " & CInt(Calc.GetAudioBitrate))
+                p.TargetFrameRate.ToString.Shorten(9) + "fps", p.Script.Info.Width & "x" & p.Script.Info.Height,
+                "Audio Bitrate: " & CInt(Calc.GetAudioBitrate))
 
             If p.VideoEncoder.IsCompCheckEnabled Then
                 laTarget2.Text = lSource1.GetMaxTextSpace(
@@ -2803,8 +2799,10 @@ Public Class MainForm
                     Not TextEncoding.IsPathSupportedBySystemEncoding(p.SourceFile) Then
 
                     If ProcessTip(If(OSVersion.Current >= OSVersion.Windows10,
-                        "The current AviSynth video encoder does not support Unicode, consider to enable UTF-8 in the administrative language settings of Windows 10.",
-                        "The current AviSynth video encoder does not support Unicode on systems older than Windows 10.")) Then
+                        "The current AviSynth video encoder does not support Unicode, " +
+                        "consider to enable UTF-8 in the administrative language settings of Windows.",
+                        "The current AviSynth video encoder does not support " +
+                        "Unicode on systems older than Windows 10.")) Then
 
                         gbAssistant.Text = "Text Encoding Limitation"
                         CanIgnoreTip = False
@@ -2992,6 +2990,7 @@ Public Class MainForm
 
             If p.Script.IsAviSynth AndAlso TypeOf p.VideoEncoder Is x264Enc AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV420P8 AndAlso
+                p.Script.Info.ColorSpace <> ColorSpace.YUV420P8_ AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV422P8 AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV444P8 AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.BGR32 AndAlso
@@ -3847,7 +3846,7 @@ Public Class MainForm
             End If
 
             Dim script = p.Script.GetNewScript
-            script.Path = (p.TempDir + p.TargetFile.Base + "_view." + script.FileType).ToShortFilePath
+            script.Path = p.TempDir + p.TargetFile.Base + "_view." + script.FileType
             script.RemoveFilter("Cutting")
 
             If script.GetError <> "" Then
@@ -5145,27 +5144,33 @@ Public Class MainForm
         FiltersListView.RebuildMenu()
     End Sub
 
-    Sub ProcessCommandLine(a As String())
+    Sub ProcessCommandLine(args As String())
+        If args.Length > 1 Then
+            Package.LoadConfAll()
+        Else
+            Exit Sub
+        End If
+
         Dim files As New List(Of String)
 
-        For Each i In CLIArg.GetArgs(a)
+        For Each arg In CliArg.GetArgs(args)
             Try
-                If Not i.IsFile AndAlso files.Count > 0 Then
-                    Dim l As New List(Of String)(files)
+                If Not arg.IsFile AndAlso files.Count > 0 Then
+                    Dim files2 As New List(Of String)(files)
                     Refresh()
-                    OpenAnyFile(l)
+                    OpenAnyFile(files2)
                     files.Clear()
                 End If
 
-                If i.IsFile Then
-                    files.Add(i.Value)
+                If arg.IsFile Then
+                    files.Add(arg.Value)
                 Else
-                    If Not CommandManager.ProcessCommandLineArgument(i.Value) Then
+                    If Not CommandManager.ProcessCommandLineArgument(arg.Value) Then
                         Throw New Exception
                     End If
                 End If
             Catch ex As Exception
-                MsgWarn("Error parsing argument:" + BR2 + i.Value + BR2 + ex.Message)
+                MsgWarn("Error parsing argument:" + BR2 + arg.Value + BR2 + ex.Message)
             End Try
         Next
 

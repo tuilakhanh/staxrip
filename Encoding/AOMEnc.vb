@@ -206,7 +206,7 @@ Public Class AV1Params
                     New BoolParam With {.Switch = "--good", .Text = "Good Quality Deadline"},
                     New BoolParam With {.Switch = "--rt", .Text = "Realtime Quality Deadline"},
                     New BoolParam With {.Switch = "--verbose", .Text = "Show encoder parameters"},
-                    New OptionParam With {.Switch = "--psnr", .Text = "Show PSNR in status line", .DefaultValue = 1, .IntegerValue = True, .Options = {"0 - Disable PSNR status line display", "1 - PSNR calculated using input bit-depth (default)", "2 - PSNR calculated using stream bit-depth"}},
+                    New OptionParam With {.Switch = "--psnr", .Text = "Show PSNR in status line", .Init = 1, .IntegerValue = True, .Options = {"0 - Disable PSNR status line display", "1 - PSNR calculated using input bit-depth (default)", "2 - PSNR calculated using stream bit-depth"}},
                     WebM,
                     New BoolParam With {.Switch = "--ivf", .Text = "Output IVF"},
                     New BoolParam With {.Switch = "--obu", .Text = "Output OBU"},
@@ -382,7 +382,7 @@ Public Class AV1Params
                     New OptionParam With {.Switch = "--set-tier-mask", .Text = "Tier mask", .IntegerValue = True, .Options = {"Main tier (default)", "High tier"}},
                     New NumParam With {.Switch = "--min-cr", .Text = "Minimum compression ratio", .Init = 0},
                     New NumParam With {.Switch = "--vbr-corpus-complexity-lap", .Text = "Average corpus complexity for 1pass VBR", .Config = {0, 10000}, .Init = 0},
-                    New OptionParam With {.Switch = "--input-bit-depth", .Text = "Input Bit Depth", .Options = {"8", "10", "12"}, .AlwaysOn = True},
+                    New OptionParam With {.Switch = "--input-bit-depth", .Text = "Input Bit Depth", .Options = {"Automatic", "8", "10", "12"}},
                     New NumParam With {.Switch = "--input-chroma-subsampling-x", .Text = "Chroma subsampling x value"},
                     New NumParam With {.Switch = "--input-chroma-subsampling-y", .Text = "Chroma subsampling y value"},
                     New NumParam With {.Switch = "--sframe-dist", .Text = "S-Frame interval"},
@@ -415,12 +415,6 @@ Public Class AV1Params
         g.ShowCommandLineHelp(Package.aomenc, id)
     End Sub
 
-    Private LastTabName As String
-
-    Sub AddTab(name As String)
-        LastTabName = name
-    End Sub
-
     Overloads Overrides Function GetCommandLine(
         includePaths As Boolean, includeExecutable As Boolean, Optional pass As Integer = 1) As String
 
@@ -441,7 +435,7 @@ Public Class AV1Params
             If p.Script.Engine = ScriptEngine.VapourSynth Then
                 sb.Append(Package.vspipe.Path.Escape + " " + script.Path.Escape + " - --y4m | " + Package.aomenc.Path.Escape + " -")
             Else
-                sb.Append(Package.ffmpeg.Path.Escape + " -i " + script.Path.Escape + " -f yuv4mpegpipe -loglevel fatal -hide_banner - | " + Package.aomenc.Path.Escape + " -")
+                sb.Append(Package.ffmpeg.Path.Escape + " -i " + script.Path.Escape + " -f yuv4mpegpipe -strict -1 -loglevel fatal -hide_banner - | " + Package.aomenc.Path.Escape + " -")
             End If
         End If
 

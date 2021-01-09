@@ -1,10 +1,38 @@
 
-2.1.5.6 Beta (2021-01-??)
+2.1.7.1 Beta (2021-01-??)
+=========================
+- Source information shows the video stream size instead of file size,
+  if not available the file size is shown in brackets (Dendraspis)
+- Neo DFTTest is now also available for AviSynth. (stax76, [#426](/../../issues/426))
+- Main dialog shows actual width and height.
+
+
+2.1.7.0 Stable (2021-01-07)
+===========================
+
+- Fixed crash using command line based audio profile. (stax76, [#423](/../../issues/423))
+
+
+2.1.6.1 Beta (2021-01-07)
 =========================
 
+- Fix CLI usage causing version verification to fail. (stax76)
+- RgTools 1.1
+- Neo FFT3D r10
+
+
+2.1.6.0 Stable (2021-01-06)
+===========================
+
 - aomenc bugfixes and UI improvements (Dendraspis, 44vince44, [#375](/../../issues/375))
-- x265 by default no longer uses a pipe tool.
 - aomenc moved cq-level option to "Rate Control 1" for better usage (Dendraspis, Neltulz, [#411](/../../issues/411))
+- aomenc internal improvements and updates (Dendraspis)
+- aomenc 10-bit input fixed. (stax76, [#420](/../../issues/420))
+- x265 --aq-mode option captions extended (stax76)
+- x265 by default no longer uses a pipe tool because we use
+  a modified x265 build now that supports both AviSynth and VapourSynth
+  directly, people who want to replace it with an ordinary x265 build
+  need to enable piping in the x265 options: Input/Output > Pipe
 - New option using the source file folder as temp file folder. (stax76)
 - Fix issue detecting default subtitle. (stax76, [#362](/../../issues/362))
 - Fix demuxed mkv subtitles not named starting at ID 1. (stax76)
@@ -12,8 +40,7 @@
 - Preferred subtitles can be defined by ID. (stax76)
 - Preferred audio tracks to demux can be defined by ID. (stax76)
 - Preferred audio and subtitle tracks in Options can be defined per menu. (stax76)
-- x265 --aq-mode option captions extended (stax76)
-- aomenc internal improvements and updates (Dendraspis)
+- mkvtoolnix 52
 
 
 2.1.5.5 Beta (2020-12-30)

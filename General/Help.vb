@@ -128,18 +128,6 @@ Public Class FolderHelp
     End Function
 End Class
 
-'TODO:remove?
-Public Class ConsoleHelp
-    Private Shared DosCodePageValue As Integer
-
-    Shared ReadOnly Property DosCodePage As Integer
-        Get
-            If DosCodePageValue = 0 Then DosCodePageValue = Regex.Match(ProcessHelp.GetConsoleOutput("cmd.exe", "/C CHCP"), "\d+").Value.ToInt
-            Return DosCodePageValue
-        End Get
-    End Property
-End Class
-
 Public Class FileHelp
     Shared Sub Move(src As String, dest As String)
         If File.Exists(src) Then
@@ -185,8 +173,7 @@ End Class
 
 Public Class ProcessHelp
     Shared Function GetConsoleOutput(
-        file As String, arguments As String,
-        Optional stderr As Boolean = False) As String
+        file As String, arguments As String, Optional stderr As Boolean = False) As String
 
         Dim ret = ""
 
@@ -194,6 +181,7 @@ Public Class ProcessHelp
             proc.StartInfo.UseShellExecute = False
             proc.StartInfo.CreateNoWindow = True
             proc.StartInfo.FileName = file
+            proc.StartInfo.WorkingDirectory = file.Dir
             proc.StartInfo.Arguments = arguments
 
             If stderr Then
