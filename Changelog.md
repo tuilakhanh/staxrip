@@ -1,10 +1,35 @@
 
-2.1.7.1 Beta (2021-01-??)
+2.1.7.2 Beta (2021-01-??)
 =========================
+
+- Using neo functions caused non neo plugins being loaded without reason. (stax76, [#250](/../../issues/250))
+- Fix weird behaviour on Audio Settings for qaac (Dendraspis)
+- x265 fixed default value for --hist-threshold (Dendraspis, [#441](/../../issues/441))
+- x265 muxing won't mux chunks from recent encodes (Dendraspis, [#438](/../../issues/438))
+- AviSynth 3.7
+
+
+2.1.7.1 Beta (2021-01-11)
+=========================
+
 - Source information shows the video stream size instead of file size,
   if not available the file size is shown in brackets (Dendraspis)
 - Neo DFTTest is now also available for AviSynth. (stax76, [#426](/../../issues/426))
-- Main dialog shows actual width and height.
+- Main dialog shows actual video width and height. (stax76)
+- Advanced Info feature of Code Editor has new VapourSynth ClipInfo option. (stax76)
+- Fix items can't be removed from or rearranged in lists (Dendraspis, [#433](/../../issues/433))
+- Fix randomly appearing IOException when using x265 with chunks (Dendraspis, [#431](/../../issues/431))
+- Revert current folder of process being set to video temp folder because
+  it locks the folder and also because the .NET Framework allows only
+  260 characters for the working directory of a process. (stax76, [#431](/../../issues/431))
+- nero aac encoder binaries removed. (stax76)
+- On systems with UTF-8 code page invalid d2v and idx files were created. (stax76, [#435](/../../issues/435))
+- Get-MediaInfo shows Range, Primaries, Transfer, Matrix. (stax76)
+- Fix wrong aspect ratio calculation in batch mode. (stax76, [#428](/../../issues/428))
+- Options dialog starts faster. (stax76)
+- WorkingDirectory property of ExecuteCommandLine command supports
+  macro expansion, Windows Terminal menu item uses the video temp
+  folder as current directory. (stax76, JJKylee [#436](/../../issues/436))
 
 
 2.1.7.0 Stable (2021-01-07)

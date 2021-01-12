@@ -22,6 +22,7 @@ Tools
     "DePanEstimate","AviSynth Plugin","DePanEstimate.dll","2.7.42","2020-05-22"
     "DFTTest","AviSynth Plugin","dfttest.dll","1.9.6 Clang","2020-03-24"
     "DFTTest Neo","AviSynth Plugin","neo-dfttest.dll","r7","2020-04-16"
+    "DGDecode","AviSynth Plugin","DGDecode.dll","2.0.0.1","2021-01-08"
     "Dither DLL","AviSynth Plugin","dither.dll","1.27.2","2019-01-01"
     "DSS2mod","AviSynth Plugin","avss.dll","2014-11-13","2019-01-01"
     "EEDI2","AviSynth Plugin","EEDI2.dll","0.9.2.0","2019-01-01"
@@ -132,7 +133,7 @@ Tools
     "BDSup2Sub++","GUI App","bdsup2sub++.exe","1.0.3","2018-05-09"
     "chapterEditor","GUI App","chapterEditor.exe","1.25","2020-10-04"
     "D2V Witch","GUI App","d2vwitch.exe","v5",""
-    "DGIndex","GUI App","DGIndex.exe","1.5.8","2010-03-06"
+    "DGIndex","GUI App","DGIndex.exe","2.0.0.1","2020-12-23"
     "MediaInfo.NET","GUI App","MediaInfoNET.exe","6.8.0.0","2020-12-13"
     "MKVToolnix GUI","GUI App","mkvtoolnix-gui.exe","52","2021-01-04"
     "MPC-BE","GUI App","mpc-be64.exe","",""
@@ -141,7 +142,7 @@ Tools
     "Subtitle Edit","GUI App","SubtitleEdit.exe","3.5.18","2020-11-09"
     "VSRip","GUI App","VSRip.exe","1.0.0.7","2011-07-14"
     "Apple Application Support","Library","CoreAudioToolbox.dll","","2020-05-06"
-    "AviSynth","Library","AviSynth.dll","3.6.2 test 6","2020-12-10"
+    "AviSynth","Library","AviSynth.dll","3.7","2021-01-11"
     "DirectX 9","Library","d3d9.dll","","2020-12-09"
     "FFTW","Library","libfftw3-3.dll","3.3.8","2018-12-20"
     "MediaInfo","Library","MediaInfo.dll","20.09","2020-10-09"
@@ -149,7 +150,7 @@ Tools
     "Visual C++ 2012","Library","msvcp110.dll","","2012-11-05"
     "Visual C++ 2013","Library","msvcp120.dll","","2016-02-10"
     "Visual C++ 2019","Library","msvcp140.dll","","2020-11-11"
-    "Get-MediaInfo","Misc","Get-MediaInfo.ps1","3.5","2020-05-04"
+    "Get-MediaInfo","Misc","Get-MediaInfo.ps1","3.5","2021-01-10"
     "Haali Splitter","Misc","splitter.ax","",""
     "AWarpSharp2","VapourSynth Plugin","libawarpsharp2.dll","2018-06-18","2019-01-01"
     "BM3D","VapourSynth Plugin","BM3D.dll","r8","2019-01-03"
@@ -461,7 +462,7 @@ DGIndex
 
 MPEG-2 demuxing and d2v indexing GUI app.
 
-
+http://rationalqm.us/dgmpgdec/dgmpgdec.html
 
 
 MediaInfo.NET
@@ -687,9 +688,19 @@ DFTTest Neo
 
 2D/3D frequency domain denoiser using Discrete Fourier transform.
 
-Filters: DFTTest
+Filters: neo_dfttest
 
 https://github.com/HomeOfAviSynthPlusEvolution/neo_DFTTest
+
+
+DGDecode
+~~~~~~~~
+
+Source filter to open D2V index files created with DGIndex or D2V Witch.
+
+Filters: MPEG2Source
+
+http://rationalqm.us/dgmpgdec/dgmpgdec.html
 
 
 Dither DLL

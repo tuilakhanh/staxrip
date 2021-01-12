@@ -2587,7 +2587,6 @@ Public Class MainForm
                             proc.WriteLog(args + BR2)
                             proc.File = Package.VSRip.Path
                             proc.Arguments = """" + fileContent + """"
-                            proc.WorkingDirectory = Package.VSRip.Directory
                             proc.AllowedExitCodes = {0, 1, 2}
                             proc.Start()
                         End Using
@@ -2674,9 +2673,14 @@ Public Class MainForm
         Dim isValidAnamorphicSize = (p.TargetWidth = 1440 AndAlso p.TargetHeight = 1080) OrElse
             (p.TargetWidth = 960 AndAlso p.TargetHeight = 720)
 
-        If p.Script.Info.Width <> 0 AndAlso Not isResized Then
-            tbTargetWidth.Text = p.Script.Info.Width.ToString
-            tbTargetHeight.Text = p.Script.Info.Height.ToString
+        If Not isResized Then
+            If p.TargetWidth <> cropw Then
+                tbTargetWidth.Text = cropw.ToString
+            End If
+
+            If p.TargetHeight <> croph Then
+                tbTargetHeight.Text = croph.ToString
+            End If
         End If
 
         lAspectRatioError.Text = Calc.GetAspectRatioError.ToString("f2") + "%"
@@ -3220,10 +3224,10 @@ Public Class MainForm
                         i.Run(p)
                         Refresh()
 
-                        For Each iExt In i.OutputExtensions
+                        For Each outExt In i.OutputExtensions
                             Dim exitFor = False
 
-                            For Each iFile In Directory.GetFiles(p.TempDir, "*." + iExt)
+                            For Each iFile In Directory.GetFiles(p.TempDir, "*." + outExt)
                                 If g.IsSourceSame(iFile) AndAlso
                                     p.SourceFile <> iFile AndAlso
                                     Not iFile.Base.EndsWith("_out") AndAlso
@@ -4220,12 +4224,28 @@ Public Class MainForm
                 If lng.IsCommon Then
                     prefAudio.AddMenu(lng.ToString + " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
                         Sub() prefAudio.Edit.Text += " " + lng.ThreeLetterCode)
-                Else
-                    prefAudio.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
-                        " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
-                        Sub() prefAudio.Edit.Text += " " + lng.ThreeLetterCode)
                 End If
             Next
+
+            Dim moreAudio = prefAudio.AddMenu("More", DirectCast(Nothing, Action))
+            Dim moreAudioFirst = prefAudio.AddMenu("More | temp", DirectCast(Nothing, Action))
+
+            Dim moreAudioAction = Sub()
+                                      For Each lng In Language.Languages
+                                          prefAudio.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
+                                         " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                                         Sub() prefAudio.Edit.Text += " " + lng.ThreeLetterCode)
+                                      Next
+                                  End Sub
+
+            AddHandler moreAudio.DropDownOpened, Sub()
+                                                     If moreAudio.DropDownItems.Count > 1 Then
+                                                         Exit Sub
+                                                     End If
+
+                                                     moreAudioFirst.Visible = False
+                                                     moreAudioAction()
+                                                 End Sub
 
             Dim cut = ui.AddMenu(Of CuttingMode)
             cut.Text = "Cutting Method"
@@ -4285,12 +4305,6 @@ Public Class MainForm
             b.Help = "Imports VUI metadata such as HDR from the source file to the video encoder."
             b.Field = NameOf(p.ImportVUIMetadata)
 
-            'TODO: added by Revan, needs research
-            b = ui.AddBool()
-            b.Text = "HDR Ingest"
-            b.Help = "Adds the Remaining Metadata Required to be Compliant to HDR10 or HLG Standards"
-            b.Field = NameOf(p.MKVHDR)
-
             Dim subPage = ui.CreateFlowPage("Subtitles", True)
 
             Dim prefSub = ui.AddTextMenu(subPage)
@@ -4310,12 +4324,28 @@ Public Class MainForm
                 If lng.IsCommon Then
                     prefSub.AddMenu(lng.ToString + " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
                         Sub() prefSub.Edit.Text += " " + lng.ThreeLetterCode)
-                Else
-                    prefSub.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
-                        " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
-                        Sub() prefSub.Edit.Text += " " + lng.ThreeLetterCode)
                 End If
             Next
+
+            Dim moreSub = prefSub.AddMenu("More", DirectCast(Nothing, Action))
+            Dim moreSubFirst = prefSub.AddMenu("More | temp", DirectCast(Nothing, Action))
+
+            Dim moreSubAction = Sub()
+                                    For Each lng In Language.Languages
+                                        prefSub.AddMenu("More | " + lng.ToString.Substring(0, 1).ToUpper + " | " + lng.ToString +
+                                         " (" + lng.TwoLetterCode + ", " + lng.ThreeLetterCode + ")",
+                                         Sub() prefSub.Edit.Text += " " + lng.ThreeLetterCode)
+                                    Next
+                                End Sub
+
+            AddHandler moreSub.DropDownOpened, Sub()
+                                                   If moreSub.DropDownItems.Count > 1 Then
+                                                       Exit Sub
+                                                   End If
+
+                                                   moreSubFirst.Visible = False
+                                                   moreSubAction()
+                                               End Sub
 
             Dim tbm = ui.AddTextMenu(subPage)
             tbm.Text = "Track Name"
@@ -4698,12 +4728,12 @@ Public Class MainForm
         ret.Add("Tools|Advanced|Add Hardcoded Subtitle...", NameOf(ShowHardcodedSubtitleDialog), Keys.Control Or Keys.H)
         ret.Add("Tools|Advanced|Event Command...", NameOf(ShowEventCommandsDialog), Symbol.LightningBolt)
         ret.Add("Tools|Advanced|Reset Setting...", NameOf(g.DefaultCommands.ResetSettings))
-        ret.Add("Tools|Advanced|Command Prompt", NameOf(g.DefaultCommands.ExecuteCommandLine), Symbol.fa_terminal, {"cmd.exe", False, False, False, Folder.Desktop})
+        ret.Add("Tools|Advanced|Command Prompt", NameOf(g.DefaultCommands.ExecuteCommandLine), Symbol.fa_terminal, {"cmd.exe", False, False, False, "%working_dir%"})
 
         If g.IsWindowsTerminalAvailable Then
-            ret.Add("Tools|Advanced|Windows Terminal", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.Control Or Keys.T, Symbol.fa_terminal, {"wt.exe", False, False, False, Folder.Desktop})
+            ret.Add("Tools|Advanced|Windows Terminal", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.Control Or Keys.T, Symbol.fa_terminal, {"wt.exe", False, False, False, "%working_dir%"})
         Else
-            ret.Add("Tools|Advanced|PowerShell Terminal", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.Control Or Keys.T, Symbol.fa_terminal, {"powershell.exe -nologo -executionpolicy unrestricted", False, False, False, Folder.Desktop})
+            ret.Add("Tools|Advanced|PowerShell Terminal", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.Control Or Keys.T, Symbol.fa_terminal, {"powershell.exe -nologo -executionpolicy unrestricted", False, False, False, "%working_dir%"})
         End If
 
         ret.Add("Tools|Edit Menu...", NameOf(ShowMainMenuEditor))

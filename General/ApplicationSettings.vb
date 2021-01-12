@@ -148,7 +148,7 @@ Public Class ApplicationSettings
             AviSynthFilterPreferences.Add("*:VP9", "LWLibavVideoSource")
             AviSynthFilterPreferences.Add("264 h264 avc", "LWLibavVideoSource")
             AviSynthFilterPreferences.Add("265 h265 hevc hvc", "LWLibavVideoSource")
-            AviSynthFilterPreferences.Add("d2v", "D2VSource")
+            AviSynthFilterPreferences.Add("d2v", "MPEG2Source")
             AviSynthFilterPreferences.Add("mp4 m4v mov", "LSMASHVideoSource")
             AviSynthFilterPreferences.Add("ts m2ts mts m2t m2v", "LWLibavVideoSource")
             AviSynthFilterPreferences.Add("vdr", "AviSource")
@@ -162,7 +162,7 @@ Public Class ApplicationSettings
             VapourSynthFilterPreferences.Add("264 h264 avc", "LWLibavSource")
             VapourSynthFilterPreferences.Add("265 h265 hevc hvc", "LWLibavSource")
             VapourSynthFilterPreferences.Add("avs vdr", "AVISource")
-            VapourSynthFilterPreferences.Add("d2v", "d2vsource")
+            VapourSynthFilterPreferences.Add("d2v", "MPEG2Source")
             VapourSynthFilterPreferences.Add("mp4 m4v mov", "LibavSMASHSource")
             VapourSynthFilterPreferences.Add("ts m2ts mts m2t m2v", "LWLibavSource")
         End If

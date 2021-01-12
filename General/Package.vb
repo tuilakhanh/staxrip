@@ -45,8 +45,20 @@ Public Class Package
         .Name = "DGIndex",
         .Filename = "DGIndex.exe",
         .Description = "MPEG-2 demuxing and d2v indexing GUI app.",
-        .Location = "Support\DGIndex",
+        .WebURL = "http://rationalqm.us/dgmpgdec/dgmpgdec.html",
+        .Location = "Support\DgMpgDec",
         .RequiredFunc = Function() CommandLineDemuxer.IsActive("%app:DGIndex%")})
+
+    Shared Property DGDecode As Package = Add(New PluginPackage With {
+        .Name = "DGDecode",
+        .Filename = "DGDecode.dll",
+        .WebURL = "http://rationalqm.us/dgmpgdec/dgmpgdec.html",
+        .Description = "Source filter to open D2V index files created with DGIndex or D2V Witch.",
+        .Location = "Support\DgMpgDec",
+        .AvsFilterNames = {"MPEG2Source"},
+        .AvsFiltersFunc = Function() {New VideoFilter("Source", "MPEG2Source", "MPEG2Source(""%source_file%"")")},
+        .VSFilterNames = {"dgdecode.MPEG2Source"},
+        .VSFiltersFunc = Function() {New VideoFilter("Source", "MPEG2Source", "clip = core.dgdecode.MPEG2Source(r""%source_file%"")")}})
 
     Shared Property D2VWitch As Package = Add(New Package With {
         .Name = "D2V Witch",
@@ -128,7 +140,7 @@ Public Class Package
         .VersionAllowAny = True,
         .IsIncluded = False,
         .RequiredFunc = Function() Audio.IsEncoderUsed(GuiAudioEncoder.qaac),
-        .Description = "qaac requires this library for AAC encoding. The license does not allow distribution."})
+        .Description = "qaac requires this non free library for AAC encoding. It's not included because the license does not allow distribution."})
 
     Shared Property fdkaac As Package = Add(New Package With {
         .Name = "fdkaac",
@@ -845,8 +857,8 @@ Public Class Package
         .Description = "2D/3D frequency domain denoiser using Discrete Fourier transform.",
         .WebURL = "https://github.com/HomeOfAviSynthPlusEvolution/neo_DFTTest",
         .DownloadURL = "https://github.com/HomeOfAviSynthPlusEvolution/neo_DFTTest/releases",
-        .AvsFilterNames = {"DFTTest"},
-        .AvsFiltersFunc = Function() {New VideoFilter("Noise", "DFTTest Neo", "DFTTest(ftype=0, sigma=2.0)")},
+        .AvsFilterNames = {"neo_dfttest"},
+        .AvsFiltersFunc = Function() {New VideoFilter("Noise", "DFTTest Neo", "neo_dfttest(ftype=0, sigma=2.0, y=3, u=3, v=3)")},
         .VSFilterNames = {"neo_dfttest.DFTTest"},
         .VSFiltersFunc = Function() {New VideoFilter("Noise", "DFTTest Neo", "clip = core.neo_dfttest.DFTTest(clip, ftype=0, sigma=2.0, planes=[0,1,2])")}})
 

@@ -187,7 +187,8 @@ Public Class VideoScript
         Optional convertToRGB As Boolean = False,
         Optional comparePath As Boolean = True,
         Optional flipVertical As Boolean = False,
-        Optional avsEncoding As Encoding = Nothing)
+        Optional avsEncoding As Encoding = Nothing,
+        Optional writeScript As Boolean = True)
 
         If Path = "" Then
             Exit Sub
@@ -203,7 +204,7 @@ Public Class VideoScript
             Exit Sub
         End If
 
-        Dim code = Macro.Expand(GetScript())
+        Dim code = GetScript()
 
         If convertToRGB Then
             If Engine = ScriptEngine.AviSynth Then
@@ -233,15 +234,54 @@ Public Class VideoScript
                 End If
 
                 vsCode += "
-if clipname.format.id == vs.RGB24:
-    _matrix_in_s = 'rgb'
-else:
-    if clipname.height > 576:
-        _matrix_in_s = '709'
-    else:
-        _matrix_in_s = '470bg'
+m_rgb = 0
+m_709 = 1
+m_unspec = 2
+m_470bg = 5
+m_2020ncl = 9
 
-clipname = clipname.resize.Bicubic(matrix_in_s = _matrix_in_s, format = vs.COMPATBGR32)
+t_709 = 1
+t_470bg = 5
+t_st2084 = 16
+
+p_709 = 1
+p_470bg = 5
+p_2020 = 9
+
+props = clip.get_frame(0).props
+
+if '_Matrix' in props and props['_Matrix'] != m_unspec and props['_Matrix'] < 15:
+    matrix = props['_Matrix']
+else:
+    if clipname.format.id == vs.RGB24:
+        matrix = m_rgb
+    else:
+        if %source_height% > 576:
+            matrix = m_709
+        else:
+            matrix = m_470bg
+
+if '_Transfer' in props and props['_Transfer'] > 0 and props['_Transfer'] < 19:
+    transfer = props['_Transfer']
+else:
+    if matrix == m_470bg:
+        transfer = t_470bg
+    elif matrix == m_2020ncl:
+        transfer = t_st2084
+    else:
+        transfer = t_709
+
+if '_Primaries' in props and props['_Primaries'] > 0 and props['_Primaries'] < 23:
+    primaries = props['_Primaries']
+else:
+    if matrix == m_470bg:
+        primaries = p_470bg
+    elif matrix == m_2020ncl:
+        primaries = p_2020
+    else:
+        primaries = p_709
+
+clipname = clipname.resize.Bicubic(matrix_in = matrix, transfer_in = transfer, primaries_in = primaries, format = vs.COMPATBGR32)
 clipname.set_output()
 "
                 vsCode = vsCode.Replace("clipname", clipname)
@@ -249,16 +289,19 @@ clipname.set_output()
             End If
         End If
 
+        code = Macro.Expand(code)
         Dim changedAvsEncoding = Engine = ScriptEngine.AviSynth AndAlso LastAvsCodePage <> avsEncoding.CodePage
 
         If Me.Error <> "" OrElse code <> LastCode OrElse
             (comparePath AndAlso Path <> LastPath) OrElse changedAvsEncoding Then
 
             If Path.Dir.DirExists Then
-                If Engine = ScriptEngine.VapourSynth Then
-                    ModifyScript(code, Engine).WriteFileUTF8(Path)
-                Else
-                    ModifyScript(code, Engine).WriteFile(Path, TextEncoding.EncodingOfProcess)
+                If writeScript Then
+                    If Engine = ScriptEngine.VapourSynth Then
+                        ModifyScript(code, Engine).WriteFileUTF8(Path)
+                    Else
+                        ModifyScript(code, Engine).WriteFile(Path, TextEncoding.EncodingOfProcess)
+                    End If
                 End If
 
                 If Not Package.AviSynth.VerifyOK OrElse
@@ -371,7 +414,7 @@ clipname.set_output()
             If fp <> "" Then
                 If Not plugin.VSFilterNames Is Nothing Then
                     For Each filterName In plugin.VSFilterNames
-                        If script.Contains(filterName) Then
+                        If ContainsFunction(script, filterName, 0) Then
                             WriteVSCode(script, code, filterName, plugin)
                         End If
                     Next
@@ -476,7 +519,7 @@ clipname.set_output()
                     For Each filterName In plugin.AvsFilterNames
                         If s.LoadAviSynthPlugins AndAlso
                             Not IsAvsPluginInAutoLoadFolder(plugin.Filename) AndAlso
-                            scriptLower.Contains(filterName.ToLower) Then
+                            ContainsFunction(scriptLower, filterName.ToLower, 0) Then
 
                             If plugin.Filename.Ext = "dll" Then
                                 Dim load = "LoadPlugin(""" + fp + """)" + BR
@@ -505,6 +548,36 @@ clipname.set_output()
         Next
 
         Return loadCode
+    End Function
+
+    Shared Function ContainsFunction(script As String, funcName As String, startPos As Integer) As Boolean
+        Dim index = script.IndexOf(funcName, startPos)
+
+        If index = -1 Then
+            Return False
+        End If
+
+        Dim charIndexBefore = index - 1
+        Dim charIndexAfter = index + funcName.Length
+        Dim charBeforeIsWord = charIndexBefore >= 0 AndAlso IsWordChar(script(charIndexBefore))
+        Dim charAfterIsWord = charIndexAfter < script.Length AndAlso IsWordChar(script(charIndexAfter))
+
+        If Not charBeforeIsWord AndAlso Not charAfterIsWord Then
+            Return True
+        Else
+            Dim newStart = index + 1
+
+            If newStart + funcName.Length < script.Length Then
+                Return ContainsFunction(script, funcName, newStart)
+            End If
+        End If
+    End Function
+
+    Shared Function IsWordChar(ch As Char) As Boolean
+        Dim val = Convert.ToInt32(ch)
+        Return (val >= 48 AndAlso val <= 57) OrElse
+               (val >= 65 AndAlso val <= 90) OrElse
+               (val >= 97 AndAlso val <= 122) OrElse val = 95
     End Function
 
     Shared Function GetAVSLoadCodeFromImports(code As String) As String
