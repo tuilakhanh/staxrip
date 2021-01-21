@@ -415,12 +415,6 @@ Public Class MP4Muxer
             proc.SkipString = "|"
             proc.Package = Package.MP4Box
             proc.Arguments = GetArgs()
-
-            If p.TempDir.Length <= g.MAX_PATH Then
-                proc.Process.StartInfo.EnvironmentVariables("TEMP") = p.TempDir
-                proc.Process.StartInfo.EnvironmentVariables("TMP") = p.TempDir
-            End If
-
             proc.Start()
         End Using
 
@@ -439,7 +433,7 @@ Public Class MP4Muxer
         Get
             Return {"ts", "m2ts", "ivf",
                     "mpg", "m2v",
-                    "avi", "ac3", "opus",
+                    "avi", "ac3", "opus", "eac3", "thd",
                     "mp4", "m4a", "aac", "mov",
                     "264", "h264", "avc",
                     "265", "h265", "hevc", "hvc",

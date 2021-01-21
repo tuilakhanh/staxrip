@@ -59,7 +59,7 @@ Public Class x265Enc
         priority As ProcessPriorityClass)
 
         If Not CanChunkEncode() Then
-            p.Script.Synchronize(False, True, False, Nothing)
+            p.Script.Synchronize(False, True, False, TextEncoding.EncodingOfProcess)
         End If
 
         Using proc As New Proc
@@ -165,8 +165,8 @@ Public Class x265Enc
         End If
 
         script.Filters.Add(New VideoFilter("aaa", "aaa", code))
-        script.Path = (p.TempDir + p.TargetFile.Base + "_CompCheck." + script.FileType).ToShortFilePath
-        script.Synchronize()
+        script.Path = p.TempDir + p.TargetFile.Base + "_CompCheck." + script.FileType
+        script.Synchronize(avsEncoding:=TextEncoding.EncodingOfProcess)
 
         Log.WriteLine(BR + script.GetFullScript + BR)
 
@@ -1389,7 +1389,7 @@ Public Class x265Params
                 sb.Append(" --stats " + (targetPath.DirAndBase + chunkName + ".stats").Escape)
             End If
 
-            Dim input = If(Decoder.Value = 0 AndAlso pipeTool = "none", script.Path.ToShortFilePath.Escape, "-")
+            Dim input = If(Decoder.Value = 0 AndAlso pipeTool = "none", script.Path.Escape, "-")
 
             If (Mode.Value = x265RateMode.ThreePass AndAlso pass <> 2) OrElse
                 (Mode.Value = x265RateMode.TwoPass AndAlso pass = 1) Then
@@ -1397,7 +1397,7 @@ Public Class x265Params
                 sb.Append(" --output NUL " + input)
             Else
                 sb.Append(" --output " + (targetPath.DirAndBase + chunkName +
-                          targetPath.ExtFull).ToShortFilePath.Escape + " " + input)
+                          targetPath.ExtFull).Escape + " " + input)
             End If
         Else
             If Seek.Value > 0 AndAlso Not IsCustom(pass, "--seek") Then
@@ -1954,8 +1954,9 @@ Public Class x265Params
                 EarlySkip.DefaultValue = False
                 FastIntra.DefaultValue = False
                 LimitTU.DefaultValue = 4
+                LimitRefs.DefaultValue = 0
                 LookaheadSlices.DefaultValue = 0
-                MaxMerge.DefaultValue = 4
+                MaxMerge.DefaultValue = 5
                 MErange.DefaultValue = 57
                 PsyRDOQ.DefaultValue = 1
                 RCLookahead.DefaultValue = 40

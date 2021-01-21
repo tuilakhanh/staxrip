@@ -233,6 +233,19 @@ Public Class GlobalClass
 
     Sub ProcessJob(jobPath As String)
         Try
+            If p.BatchMode AndAlso Not File.Exists(g.ProjectPath) Then
+                Task.Run(Sub() MsgError("Project file not found!", $"'{jobPath}'{BR}cound not be found and got skipped!"))
+                Exit Sub
+            End If
+            If Not File.Exists(jobPath) Then
+                Task.Run(Sub() MsgError("Project file not found!", $"'{jobPath}'{BR}cound not be found and got skipped!"))
+                Exit Sub
+            End If
+            If Not File.Exists(p.SourceFile) Then
+                Task.Run(Sub() MsgError("Source file not found!", $"'{p.SourceFile}'{BR}cound not be found and got skipped!"))
+                Exit Sub
+            End If
+
             g.RaiseAppEvent(ApplicationEvent.BeforeJobProcessed)
 
             Dim startTime = DateTime.Now
@@ -301,7 +314,8 @@ Public Class GlobalClass
 
             If CanEncodeVideo() Then
                 If p.VideoEncoder.CanChunkEncode Then
-                    p.Script.Synchronize(False, True, False, Nothing)
+                    Dim enc = If(TextEncoding.AvsEncoderSupportsUTF8, TextEncoding.EncodingOfProcess, Nothing)
+                    p.Script.Synchronize(False, True, False, enc)
 
                     For Each i In p.VideoEncoder.GetChunkEncodeActions
                         actions.Add(i)
@@ -1461,7 +1475,7 @@ Public Class GlobalClass
                         infoScript.AddFilter(New VideoFilter($"Import(""{script.Path}"")"))
                         Dim infoCode = $"Info(size={(script.GetInfo().Height * 0.05).ToInvariantString()})"
                         infoScript.AddFilter(New VideoFilter(infoCode))
-                        infoScript.Path = (p.TempDir + p.TargetFile.Base + $"_info." + script.FileType).ToShortFilePath
+                        infoScript.Path = p.TempDir + p.TargetFile.Base + $"_info." + script.FileType
 
                         If infoScript.GetError() <> "" Then
                             MsgError("Script Error", infoScript.GetError())
