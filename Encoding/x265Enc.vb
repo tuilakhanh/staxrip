@@ -271,7 +271,8 @@ Public Class x265Enc
 
         tester.UndocumentedSwitches = "numa-pools rdoq cip qblur cplxblur cu-stats
             dhdr10-info opt-qp-pps opt-ref-list-length-pps single-sei hrd-concat 
-            dhdr10-opt crop pb-factor ip-factor level log display-window start end"
+            dhdr10-opt crop pb-factor ip-factor level log display-window start end
+            reader-options"
 
         tester.Package = Package.x265
         tester.CodeFile = Folder.Startup.Parent + "Encoding\x265Enc.vb"
@@ -934,7 +935,7 @@ Public Class x265Params
                 ItemsValue = New List(Of CommandLineParam)
 
                 Add("Basic", Mode, Preset, Tune,
-                    New OptionParam With {.Switch = "--profile", .Switches = {"-P"}, .Text = "Profile", .Name = "ProfileMain8", .VisibleFunc = Function() OutputDepth.Value = 0, .Options = {"Automatic", "Main", "Main - Intra", "Main Still Picture", "Main 444 - 8", "Main 444 - Intra", "Main 444 - Main Still Picture"}},
+                    New OptionParam With {.Switch = "--profile", .Switches = {"-P"}, .Text = "Profile", .Name = "ProfileMain8", .VisibleFunc = Function() OutputDepth.Value = 0, .Options = {"Automatic", "Main", "Main - Intra", "Main Still Picture", "Main 444 - 8", "Main 444 - Intra", "Main 444 - Still Picture"}},
                     New OptionParam With {.Switch = "--profile", .Switches = {"-P"}, .Text = "Profile", .Name = "ProfileMain10", .VisibleFunc = Function() OutputDepth.Value = 1, .Options = {"Automatic", "Main 10", "Main 10 - Intra", "Main 422 - 10", "Main 422 - 10 - Intra", "Main 444 - 10", "Main 444 - 10 - Intra"}},
                     New OptionParam With {.Switch = "--profile", .Switches = {"-P"}, .Text = "Profile", .Name = "ProfileMain12", .VisibleFunc = Function() OutputDepth.Value = 2, .Options = {"Automatic", "Main 12", "Main 12 - Intra", "Main 422 - 12", "Main 422 - 12 - Intra", "Main 444 - 12", "Main 444 - 12 - Intra"}},
                     OutputDepth,
@@ -1059,10 +1060,10 @@ Public Class x265Params
                     New OptionParam With {.Switch = "--dolby-vision-profile", .Text = "Dolby Vision Profile", .Options = {"0", "5", "8.1", "8.2"}},
                     New StringParam With {.Switch = "--dolby-vision-rpu", .Text = "Dolby Vision RPU", .BrowseFile = True},
                     New NumParam With {.Switch = "--log2-max-poc-lsb", .Text = "Maximum Picture Order Count", .Init = 8},
-                    RepeatHeaders, Info, HRD, AUD,
+                    Info, RepeatHeaders, AUD, HRD,
                     New BoolParam With {.Switch = "--hrd-concat", .Init = False, .Text = "HRD Concat"},
-                    New BoolParam With {.Switch = "--vui-timing-info", .Text = "VUI Timing Info", .Init = True},
-                    New BoolParam With {.Switch = "--vui-hrd-info", .Text = "VUI HRD Info", .Init = True},
+                    New BoolParam With {.Switch = "--vui-timing-info", .NoSwitch = "--no-vui-timing-info", .Text = "VUI Timing Info", .Init = True},
+                    New BoolParam With {.Switch = "--vui-hrd-info", .NoSwitch = "--no-vui-hrd-info", .Text = "VUI HRD Info", .Init = True},
                     New BoolParam With {.Switch = "--idr-recovery-sei", .Init = False, .Text = "Recovery SEI"},
                     New BoolParam With {.Switch = "--single-sei", .Init = False, .Text = "Single SEI"})
                 Add("Bitstream 2",
@@ -1262,6 +1263,7 @@ Public Class x265Params
                                 If Seek.Value > 0 Then
                                     sb.Append($" --seek {Seek.Value}")
                                 End If
+
                                 If Frames.Value = 0 Then
                                     sb.Append($" --frames {script.GetFrameCount - Seek.Value}")
                                 Else
@@ -1272,10 +1274,18 @@ Public Class x265Params
                             End If
                         Case "none"
                             sb.Append(pipeString + Package.x265.Path.Escape)
+
+                            If p.Script.IsVapourSynth AndAlso FrameServerHelp.IsVapourSynthPortableUsed Then
+                                sb.Append($" --reader-options library={(Package.VapourSynth.Directory + "VSScript.dll").Escape}")
+                            ElseIf p.Script.IsAviSynth AndAlso FrameServerHelp.IsAviSynthPortableUsed Then
+                                sb.Append($" --reader-options library={Package.AviSynth.Path.Escape}")
+                            End If
+
                             If isSingleChunk Then
                                 If Seek.Value > 0 Then
                                     sb.Append($" --seek {Seek.Value}")
                                 End If
+
                                 If Frames.Value > 0 Then
                                     sb.Append($" --frames {Frames.Value}")
                                 End If

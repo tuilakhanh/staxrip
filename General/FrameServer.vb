@@ -418,12 +418,26 @@ Public Class VfwFrameServer
 End Class
 
 Public Class FrameServerHelp
+    Shared Function GetAviSynthInstallPath() As String
+        Return Registry.ClassesRoot.GetString("CLSID\{E6D6B700-124D-11D4-86F3-DB80AFD98778}\InProcServer32", Nothing)
+    End Function
+
+    Shared Function GetVapourSynthInstallPath() As String
+        For Each key In {Registry.CurrentUser, Registry.LocalMachine}
+            Dim dllPath = key.GetString("Software\VapourSynth", "VapourSynthDLL")
+
+            If File.Exists(dllPath) Then
+                Return dllPath
+            End If
+        Next
+    End Function
+
     Shared Function IsAviSynthPortableUsed() As Boolean
-        Return Package.AviSynth.Directory.PathStartsWith(Folder.Apps)
+        Return Not Package.AviSynth.Path.PathEquals(GetAviSynthInstallPath)
     End Function
 
     Shared Function IsVapourSynthPortableUsed() As Boolean
-        Return Package.VapourSynth.Directory.PathStartsWith(Folder.Apps)
+        Return Not Package.VapourSynth.Path.PathEquals(GetVapourSynthInstallPath)
     End Function
 
     Shared Function IsPortable() As Boolean
@@ -478,7 +492,7 @@ Public Class FrameServerHelp
     End Function
 
     Shared Function VerifyAviSynthLinks() As Boolean
-        Dim packages = {Package.ffmpeg, Package.x264, Package.x265, Package.VCEEnc}
+        Dim packages = {Package.ffmpeg, Package.x264}
 
         Dim links = packages.Select(Function(pack) New SoftLink(
             pack.Directory + "AviSynth.dll", Package.AviSynth.Path)).ToArray

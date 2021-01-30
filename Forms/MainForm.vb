@@ -1568,7 +1568,7 @@ Public Class MainForm
         Dim batchProject = ObjectHelp.GetCopy(Of Project)(p)
         batchProject.BatchMode = True
         batchProject.SourceFiles = {sourcefile}.ToList
-        Dim jobPath = batchFolder + sourcefile.Dir.Replace("\", "-").Replace(":", "-") + " " + p.TemplateName + " - " + sourcefile.FileName
+        Dim jobPath = batchFolder + sourcefile.Dir.Replace("\", "-").Replace(":", "-") + " " + p.TemplateName + " - " + sourcefile.FileName + ".srip"
         SafeSerialization.Serialize(batchProject, jobPath)
         JobManager.AddJob(sourcefile.Base, jobPath)
     End Sub
@@ -2057,9 +2057,12 @@ Public Class MainForm
             End If
 
             p.SourceVideoHdrFormat = MediaInfo.GetVideo(p.LastOriginalSourceFile, "HDR_Format_Commercial")
-            If p.SourceVideoHdrFormat = "" Then p.SourceVideoHdrFormat = "SDR"
-            If p.SourceVideoHdrFormat.Contains("Blu-ray / HDR10") Then p.SourceVideoHdrFormat = "DV"
-            If p.SourceVideoHdrFormat.Contains("Dolby") Then p.SourceVideoHdrFormat = "DV"
+
+            If p.SourceVideoHdrFormat = "" Then
+                p.SourceVideoHdrFormat = "SDR"
+            ElseIf p.SourceVideoHdrFormat.Contains("Blu-ray / HDR10") OrElse p.SourceVideoHdrFormat.Contains("Dolby") Then
+                p.SourceVideoHdrFormat = "DV"
+            End If
 
             p.SourceVideoFormat = MediaInfo.GetVideoFormat(p.LastOriginalSourceFile)
             p.SourceVideoFormatProfile = MediaInfo.GetVideo(p.LastOriginalSourceFile, "Format_Profile")
@@ -3493,6 +3496,11 @@ Public Class MainForm
             b.Text = "Enable tooltips in menus (restart required)"
             b.Help = "Tooltips can always be shown by right-clicking menu items."
             b.Field = NameOf(s.EnableTooltips)
+
+            b = ui.AddBool()
+            b.Text = "Customized/Shorter encoder progress text"
+            b.Help = "Customized/Shorter progress text while encoding to get a shorter (and different) overview about the progress, especially for low resolution displays."
+            b.Field = NameOf(s.ProgressOutputCustomize)
 
             '############# Preprocessing
             ui.AddControlPage(New PreprocessingControl, "Preprocessing").FormSizeScaleFactor = New Size(40, 22)

@@ -248,7 +248,7 @@ Public Class Package
         .SupportsAutoUpdate = False,
         .Siblings = {"VapourSynth"},
         .RequiredFunc = Function() p.Script.Engine = ScriptEngine.VapourSynth,
-        .HintDirFunc = Function() Package.VapourSynth.GetVapourSynthHintDir})
+        .HintDirFunc = Function() Package.VapourSynth.Path.Dir})
 
     Shared Property Python As Package = Add(New Package With {
         .Name = "Python",
@@ -888,9 +888,9 @@ Public Class Package
         .Name = "FFT3DGPU",
         .Filename = "FFT3dGPU.dll",
         .Description = "Similar algorithm to FFT3DFilter, but uses graphics hardware for increased speed.",
-        .HelpFilename = "Readme.txt",
+        .HelpURL = "https://htmlpreview.github.io/?https://github.com/pinterf/FFT3dGPU/blob/master/FFT3dGPU/documentation/fft3dgpu.htm",
         .AvsFilterNames = {"FFT3DGPU"},
-        .AvsFiltersFunc = Function() {New VideoFilter("Noise", "FFT3DFilter | FFT3DGPU", "FFT3DGPU(sigma=1.5, bt=5, bw=32, bh=32, ow=16, oh=16, sharpen=0.4, NVPerf=$select:msg:Enable Nvidia Function;True;False$)")}})
+        .AvsFiltersFunc = Function() {New VideoFilter("Noise", "FFT3DFilter | FFT3DGPU", "FFT3DGPU(sigma=1.5, bt=3, bw=32, bh=32, ow=16, oh=16, sharpen=0.4, NVPerf=$select:msg:Enable Nvidia Function;True;False$)")}})
 
     Shared Property D2VSourceAVS As Package = Add(New PluginPackage With {
         .Name = "D2VSource",
@@ -1107,9 +1107,10 @@ Public Class Package
         Add(New PluginPackage With {
             .Name = "AvsResize",
             .Filename = "avsresize.dll",
-            .HelpFilename = "Readme.txt",
+            .HelpFilename = "README.md",
             .WebURL = "http://forum.doom9.org/showthread.php?t=173986",
-            .AvsFilterNames = {"z_ConvertFormat", "z_PointResize", "z_BilinearResize", "z_BicubicResize", "z_LanczosResize", "z_Lanczos4Resize", "z_BlackmanResize", "z_Spline16Resize", "z_Spline36Resize", "z_Spline64Resize", "z_GaussResize", "z_SincResize"}})
+            .AvsFilterNames = {"z_ConvertFormat", "z_PointResize", "z_BilinearResize", "z_BicubicResize", "z_LanczosResize", "z_Lanczos4Resize", "z_Spline16Resize", "z_Spline36Resize", "z_Spline64Resize"},
+            .AvsFiltersFunc = Function() {New VideoFilter("Color", "Convert | Format", "z_ConvertFormat(pixel_type=""$enter_text:Enter the Format You Wish to Convert to$"", colorspace_op=""$select:msg:Select Input Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Input Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Input Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$=>$select:msg:Select Output Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Output Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Output Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$"", dither_type=""$select:msg:Select Dither Type;none;ordered;random;error_diffusion$"")")}})
 
         Add(New PluginPackage With {
             .Name = "ResizeX",
@@ -2153,7 +2154,11 @@ Public Class Package
         End If
 
         If HelpFilename <> "" Then
-            dic("Local") = Directory + HelpFilename
+            If Not HelpSwitch Is Nothing AndAlso HelpFilename = Name + " Help.txt" Then
+                dic("Console") = Directory + HelpFilename
+            Else
+                dic("Local") = Directory + HelpFilename
+            End If
         End If
 
         dic("Online") = HelpURL
@@ -2374,7 +2379,7 @@ Public Class Package
     End Function
 
     Function IsCustomPathAllowed() As Boolean
-        Return Not Path.StartsWithEx(Folder.System) AndAlso Not Path.ContainsEx("FrameServer")
+        Return Not Path.PathStartsWith(Folder.System)
     End Function
 
     ReadOnly Property Directory As String
@@ -2406,24 +2411,24 @@ Public Class Package
     End Function
 
     Function GetAviSynthHintDir() As String
-        If Not s.AviSynthMode = FrameServerMode.Portable AndAlso
-            File.Exists(Folder.System + Filename) Then
+        If s.AviSynthMode <> FrameServerMode.Portable Then
+            Dim dllPath = FrameServerHelp.GetAviSynthInstallPath
 
-            Return Folder.System
+            If dllPath.FileExists Then
+                Return dllPath.Dir
+            End If
         End If
 
         Return GetPathFromLocation("FrameServer\AviSynth").Dir
     End Function
 
     Function GetVapourSynthHintDir() As String
-        If Not s.VapourSynthMode = FrameServerMode.Portable Then
-            For Each key In {Registry.CurrentUser, Registry.LocalMachine}
-                Dim dllPath = key.GetString("Software\VapourSynth", "VapourSynthDLL")
+        If s.VapourSynthMode <> FrameServerMode.Portable Then
+            Dim dllPath = FrameServerHelp.GetVapourSynthInstallPath
 
-                If File.Exists(dllPath) Then
-                    Return dllPath.Dir
-                End If
-            Next
+            If dllPath <> "" Then
+                Return dllPath.Dir
+            End If
         End If
 
         Return GetPathFromLocation("FrameServer\VapourSynth").Dir

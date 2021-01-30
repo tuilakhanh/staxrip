@@ -1,5 +1,6 @@
 ﻿
 Imports System.Runtime.InteropServices
+Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports System.Threading.Tasks
 
@@ -91,17 +92,45 @@ Public Class ProcController
     End Sub
 
     Sub StatusHandler(value As String)
-        ProgressBar.Text = value
+        SetText(value)
         SetProgress(value)
     End Sub
 
     Shared LastProgress As Double
 
+    Sub SetText(value As String)
+        value = value.Trim()
+
+        If s.ProgressOutputCustomize Then
+            If Proc.Package Is Package.x264 Then
+                Dim pattern = "\[((\d+)\.?(\d*))%\]\s+((\d+)/(\d+)(\sframes)),\s((\d+)\.?(\d*)(\sfps)),\s((\d+)\.?(\d*)\s([a-z]{2}/s)),\s(\d+)\.(\d+)\s([a-z]{1,2}),\seta\s(\d+:\d+:\d+),\sest\.size\s(\d+)\.(\d+)\s([a-z]{1,2})"
+                Dim match = Regex.Match(value, pattern, RegexOptions.IgnoreCase)
+                If match.Success Then
+                    value = $"[{match.Groups(2).Value,2}.{match.Groups(3).Value}%] {match.Groups(5).Value.PadLeft(match.Groups(6).Value.Length)}/{match.Groups(6).Value} frames @ {match.Groups(9).Value}.{match.Groups(10).Value} fps, {match.Groups(13).Value,4}.{match.Groups(14).Value} {match.Groups(15).Value}, {match.Groups(16).Value}.{match.Groups(17).Value} {match.Groups(18).Value} ({match.Groups(20).Value} {match.Groups(22).Value}), -{match.Groups(19).Value}"
+                Else
+                    pattern = "\[\s*((\d+)\.?(\d*))%\]\s+((\d+)/(\d+))\s+((\d+)\.?(\d*))\s+((\d+)\.?(\d*))\s+(\d+:\d+:\d+)\s+(\d+:\d+:\d+)\s+((\d+)\.(\d+))\s([a-z]{1,2})\s+((\d+)\.(\d+))\s([a-z]{1,2})"
+                    match = Regex.Match(value, pattern, RegexOptions.IgnoreCase)
+                    If match.Success Then
+                        value = $"[{match.Groups(2).Value,2}.{match.Groups(3).Value}%] {match.Groups(5).Value.PadLeft(match.Groups(6).Value.Length)}/{match.Groups(6).Value} frames @ {match.Groups(8).Value}.{match.Groups(9).Value} fps, {match.Groups(11).Value,4}.{match.Groups(12).Value} kb/s, {match.Groups(16).Value}.{match.Groups(17).Value} {match.Groups(18).Value} ({match.Groups(20).Value}.{match.Groups(21).Value} {match.Groups(22).Value}), {match.Groups(13).Value} (-{match.Groups(14).Value})"
+                    End If
+                End If
+            ElseIf Proc.Package Is Package.x265 Then
+                Dim pattern = "\[((\d+)\.?(\d*))%\]\s+((\d+)/(\d+)(\sframes)),\s((\d+)\.?(\d*)(\sfps)),\s((\d+)\.?(\d*)\s([a-z]{2}/s)),\selapsed:\s(\d+:\d+:\d+),\seta:\s(\d+:\d+:\d+),\ssize:\s(\d+)\.(\d+)\s([a-z]{1,2}),\sest\.\ssize:\s(\d+)\.(\d+)\s([a-z]{1,2})"
+                Dim match = Regex.Match(value, pattern, RegexOptions.IgnoreCase)
+                If match.Success Then
+                    value = $"[{match.Groups(2).Value,2}.{match.Groups(3).Value}%] {match.Groups(5).Value.PadLeft(match.Groups(6).Value.Length)}/{match.Groups(6).Value} frames @ {match.Groups(9).Value}.{match.Groups(10).Value} fps, {match.Groups(13).Value,4}.{match.Groups(14).Value} {match.Groups(15).Value}, {match.Groups(18).Value}.{match.Groups(19).Value} {match.Groups(20).Value} ({match.Groups(21).Value} {match.Groups(23).Value}), {match.Groups(16).Value} (-{match.Groups(17).Value})"
+                End If
+            End If
+        End If
+
+        ProgressBar.Text = value
+    End Sub
+
+
     Sub SetProgress(value As String)
         If Proc.IsSilent Then
             Exit Sub
         End If
-
         If value.Contains("%") Then
             value = value.Left("%")
 
@@ -441,9 +470,9 @@ Public Class ProcController
 
                                   'If Not BlockActivation Then
                                   g.ProcForm.Activate()
-                                      '    BlockActivation = True
-                                      'End If
-                                  End If
+                                  '    BlockActivation = True
+                                  'End If
+                              End If
 
                               AddProc(proc)
                               g.ProcForm.UpdateControls()

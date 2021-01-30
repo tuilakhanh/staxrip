@@ -1,11 +1,37 @@
 
-2.1.7.4 Beta (2021-01-??)
+2.1.7.6 Beta (2021-01-??)
+=========================
+
+- Apps dialog allows custom paths to AviSynth and VapourSynth portable (stax76)
+- Installed AviSynth don't has to be located in System32, it can be installed
+  anywhere using the included install.ps1 powershell script (stax76)
+- NVEnc parameter fixes and option re-organisation (Dendraspis, [#468](/../../issues/468))
+- x265 two parameters not set when checkbox unchecked (Dendraspis)
+- Optional customized/shorter progress text while encoding for x264/x265 (Dendraspis)
+- x265 avs portable mode sets --reader-options library=avs-dll-path (stax76)
+- x265 3.4+65-aMod-gcc10.2.1 DJATOM Mod, avs portable support,
+  vs async frame requests logic overhaul ([#470](/../../issues/470))
+- FFT3dGPU 0.8.6
+
+
+2.1.7.5 Beta (2021-01-23)
+=========================
+
+- x265 with AviSynth input incorrect command line (stax76, [#475](/../../issues/475))
+
+
+2.1.7.4 Beta (2021-01-23)
 =========================
 
 - Make forced closing optional via settings (Dendraspis)
 - NVEnc gets '--vpp-colorspace' options (Dendraspis, [#461](/../../issues/461))
 - Messagebox when processed file or its project file is not found instead of crash (Dendraspis, [#460](/../../issues/460))
+- x265 vpy input sets --reader-options library=path-to-vsscript.dll (stax76, [#471](/../../issues/471))
+- x265 UI issue fix (stax76, [#472](/../../issues/472))
+- vceenc uses --avsdll in portable mode (stax76, [#473](/../../issues/473))
 - D2VSource 1.2.2
+- x265 3.4+62-aMod-gcc10.2.1-hdr10-info msg7086/DJATOM
+- avsresize r5
 
 
 2.1.7.3 Beta (2021-01-18)
