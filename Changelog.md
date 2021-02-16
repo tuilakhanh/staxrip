@@ -1,17 +1,93 @@
 
-2.1.7.6 Beta (2021-01-??)
+2.1.8.2 Beta (2021-02-??)
+=========================
+
+- New Preview dialog feature 'Create job for each selection' (stax76, [#512](/../../issues/512))
+- Fix crash in Preview dialog using 2 instances and shortcut keys (stax76, [#515](/../../issues/515))
+- nvenc 5.29
+- MP4Box 1.1.0 rev506 gcc10.2 Patman
+
+
+2.1.8.1 Beta (2021-02-13)
+=========================
+
+- aomenc options rearranged (Dendraspis)
+- aomenc supports chunk encoding (Dendraspis, [#368](/../../issues/368))
+- aomenc gets decoder and pipe settings (Dendraspis, [#497](/../../issues/497))
+- aomenc default value for --kf-max-dist changed to 120 (Dendraspis, 44vince44, [#506](/../../issues/506))
+- aomenc default value for --kf-min-dist changed to 12 (Dendraspis, 44vince44, [#506](/../../issues/506))
+- aomenc sets --verbose by default (Dendraspis, 44vince44, [#506](/../../issues/506))
+- Fix frame rates for AviSynth functions (44vince44)
+- Replace Rapair16 with Dither_Repair16 for AVS (44vince44)
+- Fix AvsResize website address and VS ConvertFormat command (JJKylee)
+- aomenc 2-pass stats file extension change to '.fpf' (Dendraspis)
+- Fix aomenc --webm parameter (Dendraspis)
+- Force mkvmerge to write fps in case of aomenc not using IVF container (Dendraspis)
+- Fix shortcut editor key default causing an issue when m is typed (stax76, [#505](/../../issues/505))
+- x265 UI option for '--progress-readframes' on DJATOM builds (Dendraspis)
+- nvenc 5.28 (Windows 10 long path and AviSynth Unicode support)
+
+
+2.1.8.0 Stable (2021-02-09)
+===========================
+
+- Audio source file bitrate detection fix (stax76)
+- New VideoFilter "ChangeFPS" for AviSynth (Dendraspis, 44vince44, [#499](/../../issues/499))
+- New VideoFilter "Rotation" (Dendraspis)
+- Auto-Rotation feature for supported source files/container (Dendraspis, [#390](/../../issues/390))
+- BAT and PS1 scripts to install and uninstall AviSynth and VapourSynth
+  portable system wide are located at Apps\FrameServer\Install (stax76)
+- New feature to automatically save projects (stax76)
+- New feature to automatically fix bad frame rates (stax76)
+
+
+2.1.7.9 Beta (2021-02-08)
+=========================
+
+- x265 --version output is used in order to detect if it's aMod, Asuna or Vanilla (stax76)
+- Menu in the code editor can be customized and is much faster (stax76, [#494](/../../issues/494))
+
+
+2.1.7.8 Beta (2021-02-06)
+=========================
+
+- Support 10-bit avs input for x264 in case the x264 version name contains the keyword aMod (stax76)
+- AviSynth portable mode no longer uses soft links but moves files if necessary (stax76, [#473](/../../issues/473))
+- For x264 and x265 different code paths are used depending if the version name contains
+  the keywords aMod or Asuna, Vanilla builds are supported as well (stax76)
+
+
+2.1.7.7 Beta (2021-02-05)
+=========================
+
+- VPY files failed to import (stax76, [#486](/../../issues/486))
+- Warning for non spec compliant AC3 bitrate moved to main dialog
+  so it's possible to ignore the warning (stax76, JKyle)
+- avs2pipemod mod with Unicode and Long Path support (stax76)
+- .aac files demuxed with mkvextract are no longer converted to .m4a (stax76, [#489](/../../issues/489))
+- x264 --fade-compensate --log-file --log-file-level --opts --progress-header (stax76)
+- mkvtoolnix 53
+
+
+2.1.7.6 Beta (2021-02-03)
 =========================
 
 - Apps dialog allows custom paths to AviSynth and VapourSynth portable (stax76)
 - Installed AviSynth don't has to be located in System32, it can be installed
   anywhere using the included install.ps1 powershell script (stax76)
 - NVEnc parameter fixes and option re-organisation (Dendraspis, [#468](/../../issues/468))
+- NVEnc gets '--vpp-warpsharp' options and a Sharpness subsection (Dendraspis)
 - x265 two parameters not set when checkbox unchecked (Dendraspis)
 - Optional customized/shorter progress text while encoding for x264/x265 (Dendraspis)
-- x265 avs portable mode sets --reader-options library=avs-dll-path (stax76)
-- x265 3.4+65-aMod-gcc10.2.1 DJATOM Mod, avs portable support,
+- Fix Re-mux TS to MKV via ffmpeg doesn't demux AAC tracks with ADTS (Dendraspis, [#483](/../../issues/483))
+- x264 portable mode uses DJATOM Mod --synth-lib (stax76)
+- x265 portable mode uses DJATOM Mod --reader-options library (stax76)
+- Command line preview uses scrollbar in case > 9 lines (stax76, [#481](/../../issues/481))
+- x265 3.4+70-aMod-gcc10.2.1 DJATOM Mod, avs portable support,
   vs async frame requests logic overhaul ([#470](/../../issues/470))
 - FFT3dGPU 0.8.6
+- x264 aMod-core161-r3039+17 DJATOM (--synth-lib)
+- nvenc 5.26
 
 
 2.1.7.5 Beta (2021-01-23)

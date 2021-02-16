@@ -244,6 +244,8 @@ Public Class PreviewForm
 
 #End Region
 
+    Shared Property Instances As New List(Of PreviewForm)
+
     Private FrameServer As IFrameServer
     Private Renderer As VideoRenderer
     Private StartRange As Integer = -1
@@ -257,7 +259,6 @@ Public Class PreviewForm
     Private ShowPreviewInfo As Boolean
     Private HidePreviewButtons As Boolean
 
-    Private Shared Instances As New List(Of PreviewForm)
     Private WithEvents GenericMenu As CustomMenu
 
     Sub New(script As VideoScript)
@@ -631,8 +632,42 @@ Public Class PreviewForm
         Next
 
         p.Ranges.Sort()
-
+        MergeRanges()
         AfterPositionChanged()
+    End Sub
+
+    <Command("Creates a job for each selection.")>
+    Sub CreateJobForEachSelection()
+        If p.SourceFile = "" OrElse p.Ranges.Count = 0 Then
+            Exit Sub
+        End If
+
+        If Not g.MainForm.AssistantPassed Then
+            MsgError("Follow assistant message in main dialog.")
+            Exit Sub
+        End If
+
+        If MsgQuestion("Save current project?") = DialogResult.OK Then
+            g.MainForm.IsSaveCanceled()
+        End If
+
+        Dim ranges = p.Ranges.ToArray
+        Dim targetFile = p.TargetFile
+
+        For x = 0 To ranges.Length - 1
+            p.Ranges.Clear()
+            p.Ranges.Add(ranges(x))
+            g.UpdateTrim(p.Script)
+            g.MainForm.UpdateFilters()
+            g.MainForm.tbTargetFile.Text = targetFile.DirAndBase + "_" & (x + 1) & targetFile.ExtFull
+            g.MainForm.AddJob(False)
+        Next
+
+        g.MainForm.tbTargetFile.Text = targetFile
+        p.Ranges = ranges.ToList
+        g.UpdateTrim(p.Script)
+        g.MainForm.UpdateFilters()
+        g.MainForm.ShowJobsDialog()
     End Sub
 
     <Command("Clears all cuts.")>
@@ -856,10 +891,12 @@ Public Class PreviewForm
         ret.Add("Cut|Begin Selection", NameOf(SetRangeStart), Keys.Home)
         ret.Add("Cut|End Selection", NameOf(SetRangeEnd), Keys.End)
         ret.Add("Cut|-")
-        ret.Add("Cut|Split", NameOf(SplitRange), Keys.S)
+        ret.Add("Cut|Split Selection", NameOf(SplitRange), Keys.S)
         ret.Add("Cut|-")
         ret.Add("Cut|Delete Selection", NameOf(DeleteRange), Keys.Delete, Symbol.Delete)
         ret.Add("Cut|Delete All Selections", NameOf(ClearAllRanges), Keys.Control Or Keys.Delete)
+        ret.Add("Cut|-")
+        ret.Add("Cut|Create job for each selection", NameOf(CreateJobForEachSelection))
 
         ret.Add("View|Info", NameOf(ToggleInfos), Keys.I, Symbol.Info)
         ret.Add("View|Fullscreen", NameOf(SwitchWindowState), Keys.Enter, Symbol.FullScreen)
@@ -1005,6 +1042,9 @@ Public Class PreviewForm
             VideoSize = New Size(CInt(info.Width), CInt(info.Height))
         End If
 
+        p.CutFrameCount = info.FrameCount
+        p.CutFrameRate = FrameServer.FrameRate
+
         Dim workingArea = Screen.FromControl(Me).WorkingArea
         Dim initHeight = CInt((workingArea.Height / 100) * s.PreviewSize)
 
@@ -1071,12 +1111,11 @@ Public Class PreviewForm
     Protected Overrides Sub OnFormClosing(args As FormClosingEventArgs)
         MyBase.OnFormClosing(args)
         Instances.Remove(Me)
+        GenericMenu.RemoveKeyDownHandler(Me)
         g.UpdateTrim(p.Script)
         s.ShowPreviewInfo = ShowPreviewInfo
         s.HidePreviewButtons = HidePreviewButtons
         s.LastPosition = Renderer.Position
-        p.CutFrameCount = FrameServer.Info.FrameCount
-        p.CutFrameRate = FrameServer.FrameRate
         g.MainForm.UpdateFilters()
         Renderer.Dispose()
         FrameServer.Dispose()

@@ -1,4 +1,5 @@
 
+Imports System.ComponentModel
 Imports StaxRip.UI
 
 Public Class FiltersListView
@@ -78,7 +79,7 @@ Public Class FiltersListView
 
         For Each i In filterProfiles
             For Each i2 In i.Filters
-                ActionMenuItem.Add(replaceMenuItem.DropDownItems, i.Name + " | " + i2.Path, AddressOf ReplaceClick, i2, i2.Script)
+                MenuItemEx.Add(replaceMenuItem.DropDownItems, i.Name + " | " + i2.Path, AddressOf ReplaceClick, i2, i2.Script)
             Next
         Next
 
@@ -88,7 +89,7 @@ Public Class FiltersListView
 
         For Each i In filterProfiles
             For Each i2 In i.Filters
-                ActionMenuItem.Add(insertMenuItem.DropDownItems, i.Name + " | " + i2.Path, AddressOf InsertClick, i2, i2.Script)
+                MenuItemEx.Add(insertMenuItem.DropDownItems, i.Name + " | " + i2.Path, AddressOf InsertClick, i2, i2.Script)
             Next
         Next
 
@@ -97,7 +98,7 @@ Public Class FiltersListView
 
         For Each i In filterProfiles
             For Each i2 In i.Filters
-                ActionMenuItem.Add(add.DropDownItems, i.Name + " | " + i2.Path, AddressOf AddClick, i2, i2.Script)
+                MenuItemEx.Add(add.DropDownItems, i.Name + " | " + i2.Path, AddressOf AddClick, i2, i2.Script)
             Next
         Next
 
@@ -106,8 +107,8 @@ Public Class FiltersListView
         remove.SetImage(Symbol.Remove)
         remove.EnabledFunc = selectedFunc
 
-        Menu.Add("Edit Code...", AddressOf ShowEditor, "Dialog to edit filters.").SetImage(Symbol.Code)
-        Menu.Add("Preview Code...", Sub() g.CodePreview(p.Script.GetFullScript), "Script code preview.")
+        Menu.Add("Edit Code...", AddressOf ShowCodeEditor, "Dialog to edit filters.").SetImage(Symbol.Code)
+        Menu.Add("Preview Code...", Sub() g.ShowCodePreview(p.Script.GetFullScript), "Script code preview.")
         Menu.Add("Info...", Sub() g.ShowScriptInfo(p.Script), Function() p.SourceFile <> "", "Shows script parameters.").SetImage(Symbol.Info)
         Menu.Add("Play", Sub() g.PlayScript(p.Script), Function() p.SourceFile <> "", "Plays the script with the AVI player.").SetImage(Symbol.Play)
         Menu.Add("Profiles...", AddressOf g.MainForm.ShowFilterProfilesDialog, "Dialog to edit profiles.").SetImage(Symbol.FavoriteStar)
@@ -127,26 +128,28 @@ Public Class FiltersListView
         setup.SetImage(Symbol.MultiSelect)
         g.PopulateProfileMenu(setup.DropDownItems, s.FilterSetupProfiles, AddressOf g.MainForm.ShowFilterSetupProfilesDialog, AddressOf g.MainForm.LoadFilterSetup)
 
-        AddHandler Menu.Opening, Sub()
-                                     Dim active = DirectCast(Menu.Items(0), ActionMenuItem)
-                                     active.DropDownItems.ClearAndDisplose
-                                     sep0.Visible = SelectedItems.Count > 0
+        Dim a = Sub(sender As Object, e As CancelEventArgs)
+                    Dim active = DirectCast(Menu.Items(0), MenuItemEx)
+                    active.DropDownItems.ClearAndDisplose
+                    sep0.Visible = SelectedItems.Count > 0
 
-                                     If SelectedItems.Count = 0 Then
-                                         Exit Sub
-                                     End If
+                    If SelectedItems.Count = 0 Then
+                        Exit Sub
+                    End If
 
-                                     Dim selectedFilter = DirectCast(SelectedItems(0).Tag, VideoFilter)
-                                     active.Text = selectedFilter.Category
+                    Dim selectedFilter = DirectCast(SelectedItems(0).Tag, VideoFilter)
+                    active.Text = selectedFilter.Category
 
-                                     For Each i In filterProfiles
-                                         If i.Name = selectedFilter.Category Then
-                                             For Each i2 In i.Filters
-                                                 ActionMenuItem.Add(active.DropDownItems, i2.Path, AddressOf ReplaceClick, i2.GetCopy, i2.Script)
-                                             Next
-                                         End If
-                                     Next
-                                 End Sub
+                    For Each i In filterProfiles
+                        If i.Name = selectedFilter.Category Then
+                            For Each i2 In i.Filters
+                                MenuItemEx.Add(active.DropDownItems, i2.Path, AddressOf ReplaceClick, i2.GetCopy, i2.Script)
+                            Next
+                        End If
+                    Next
+                End Sub
+
+        AddHandler Menu.Opening, a
     End Sub
 
     Sub MoveUp()
@@ -185,7 +188,7 @@ Public Class FiltersListView
         g.MainForm.Assistant()
     End Sub
 
-    Sub ShowEditor()
+    Sub ShowCodeEditor()
         p.Script.Edit()
         g.UpdateTrim(p.Script)
         OnChanged()

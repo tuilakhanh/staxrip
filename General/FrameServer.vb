@@ -84,17 +84,27 @@ Public Structure ServerInfo
     Public FrameCount As Integer
     Public ColorSpace As ColorSpace
 
-    Function GetInfoText(position As Integer) As String
-        Dim rate = FrameRateNum / FrameRateDen
+    ReadOnly Property FrameRate As Double
+        Get
+            If FrameRateDen <> 0 Then
+                Return FrameRateNum / FrameRateDen
+            End If
+        End Get
+    End Property
 
-        Dim lengthtDate = Date.Today.AddSeconds(FrameCount / rate)
+    Function GetInfoText(position As Integer) As String
+        If FrameRateDen = 0 Then
+            Return ""
+        End If
+
+        Dim lengthtDate = Date.Today.AddSeconds(FrameCount / FrameRate)
         Dim dateFormat = If(lengthtDate.Hour = 0, "mm:ss.fff", "HH:mm:ss.fff")
         Dim frames = FrameCount.ToString
         Dim len = lengthtDate.ToString(dateFormat)
 
         If position > -1 Then
             frames = position & " of " & FrameCount
-            Dim currentDate = Date.Today.AddSeconds(position / rate)
+            Dim currentDate = Date.Today.AddSeconds(position / FrameRate)
             len = currentDate.ToString(dateFormat) + " of " + lengthtDate.ToString(dateFormat)
         End If
 
@@ -102,7 +112,7 @@ Public Structure ServerInfo
                "Height    : " & Height & BR &
                "Frames    : " + frames + BR +
                "Time      : " + len + BR +
-               "Framerate : " + rate.ToInvariantString.Shorten(9) + " (" & FrameRateNum & "/" & FrameRateDen & ")" + BR +
+               "Framerate : " + FrameRate.ToInvariantString.Shorten(9) + " (" & FrameRateNum & "/" & FrameRateDen & ")" + BR +
                "Format    : " + ColorSpace.ToString.Replace("_", "")
     End Function
 End Structure
@@ -418,51 +428,63 @@ Public Class VfwFrameServer
 End Class
 
 Public Class FrameServerHelp
+    Shared Function GetSynthPath() As String
+        Return If(IsAviSynth(), Package.AviSynth.Path, Package.VapourSynth.Directory + "VSScript.dll")
+    End Function
+
     Shared Function GetAviSynthInstallPath() As String
-        Return Registry.ClassesRoot.GetString("CLSID\{E6D6B700-124D-11D4-86F3-DB80AFD98778}\InProcServer32", Nothing)
+        Dim dll = Registry.ClassesRoot.GetString("CLSID\{E6D6B700-124D-11D4-86F3-DB80AFD98778}\InProcServer32", Nothing)
+
+        If dll = "AviSynth.dll" Then
+            dll = Folder.System + "AviSynth.dll"
+        End If
+
+        If dll.FileExists Then
+            Return dll
+        End If
     End Function
 
     Shared Function GetVapourSynthInstallPath() As String
         For Each key In {Registry.CurrentUser, Registry.LocalMachine}
-            Dim dllPath = key.GetString("Software\VapourSynth", "VapourSynthDLL")
+            Dim dll = key.GetString("Software\VapourSynth", "VapourSynthDLL")
 
-            If File.Exists(dllPath) Then
-                Return dllPath
+            If dll.FileExists Then
+                Return dll
             End If
         Next
     End Function
 
-    Shared Function IsAviSynthPortableUsed() As Boolean
-        Return Not Package.AviSynth.Path.PathEquals(GetAviSynthInstallPath)
+    Shared Function IsAviSynthPortable() As Boolean
+        Return s.AviSynthMode = FrameServerMode.Portable
     End Function
 
-    Shared Function IsVapourSynthPortableUsed() As Boolean
-        Return Not Package.VapourSynth.Path.PathEquals(GetVapourSynthInstallPath)
+    Shared Function IsVapourSynthPortable() As Boolean
+        Return s.VapourSynthMode = FrameServerMode.Portable
     End Function
 
     Shared Function IsPortable() As Boolean
-        If (IsAviSynthUsed() AndAlso IsAviSynthPortableUsed()) OrElse
-            (IsVapourSynthUsed() AndAlso IsVapourSynthPortableUsed()) Then
+        If (IsAviSynth() AndAlso IsAviSynthPortable()) OrElse
+            (IsVapourSynth() AndAlso IsVapourSynthPortable()) Then
 
             Return True
         End If
     End Function
 
-    Shared Function IsAviSynthInstalled() As Boolean
-        Return (Folder.System + "AviSynth.dll").FileExists
+    Shared Function IsAviSynthSystemInstalled() As Boolean
+        Return File.Exists(Folder.System + "AviSynth.dll")
     End Function
 
-    Shared Function IsAviSynthUsed() As Boolean
+    Shared Function IsAviSynth() As Boolean
         Return p.Script.IsAviSynth
     End Function
 
-    Shared Function IsVapourSynthUsed() As Boolean
+    Shared Function IsVapourSynth() As Boolean
         Return p.Script.Engine = ScriptEngine.VapourSynth
     End Function
 
     Shared Function IsVfwUsed() As Boolean
-        Return (IsAviSynthUsed() AndAlso s.AviSynthMode = FrameServerMode.VFW) OrElse
-            (IsVapourSynthUsed() AndAlso s.VapourSynthMode = FrameServerMode.VFW)
+        Return (IsAviSynth() AndAlso s.AviSynthMode = FrameServerMode.VFW) OrElse
+            (IsVapourSynth() AndAlso s.VapourSynthMode = FrameServerMode.VFW)
     End Function
 
     Shared Function IsffmpegUsed() As Boolean
@@ -470,63 +492,72 @@ Public Class FrameServerHelp
             Return True
         End If
 
-        If p.VideoEncoder.GetCommandLine(True, True).ContainsEx("ffmpeg") Then
+        If TypeOf p.VideoEncoder Is ffmpegEnc OrElse p.VideoEncoder.GetCommandLine(True, True).ContainsEx("ffmpeg") Then
             Return True
         End If
     End Function
 
-    Shared Function AreAviSynthLinksRequired() As Boolean
-        If IsAviSynthUsed() AndAlso IsAviSynthPortableUsed() Then
-            If IsffmpegUsed() Then
-                Return True
-            End If
-
-            If Not IsAviSynthInstalled() Then
-                Return False
-            End If
-
-            If Not p.VideoEncoder.GetCommandLine(True, True).ContainsEx(Package.AviSynth.Path) Then
-                Return True
-            End If
-        End If
-    End Function
-
-    Shared Function VerifyAviSynthLinks() As Boolean
-        Dim packages = {Package.ffmpeg, Package.x264}
-
-        Dim links = packages.Select(Function(pack) New SoftLink(
-            pack.Directory + "AviSynth.dll", Package.AviSynth.Path)).ToArray
-
-        If AreAviSynthLinksRequired() Then
-            If Not SoftLink.AreLinksValid(links) Then
-                Try
-                    SoftLink.CreateLinks(links)
-                Catch
-                    Using td As New TaskDialog(Of Boolean)
-                        td.MainIcon = TaskDialogIcon.Shield
-                        td.MainInstruction = "AviSynth Portable Mode"
-                        td.Content = "The current configuration uses AviSynth portable mode with AviSynth tools " +
-                                     "that do not support portable mode, to workaround this it's required to " +
-                                     "create soft links that are pointing to the location of portable AviSynth."
-                        td.AddCommand("Create portable AviSynth soft links", True)
-
-                        If td.Show Then
-                            SoftLink.CreateLinksElevated(links)
-                        End If
-                    End Using
-                End Try
-
-                Return SoftLink.AreLinksValid(links)
-            End If
-        ElseIf Not IsAviSynthPortableUsed() Then
+    Shared Sub MoveFiles(srcDir As String, targetDir As String, fileNames As String())
+        For Each name In fileNames
             Try
-                SoftLink.DeleteLinks(links)
+                FileHelp.Move(srcDir + name, targetDir + name)
             Catch ex As Exception
-                g.ShowException(ex)
+                MsgError("Could not move file from:" + BR2 + srcDir + name + BR2 +
+                         "to:" + BR2 + targetDir + name + BR2 + ex.Message)
             End Try
+        Next
+    End Sub
+
+    Shared Sub AviSynthToolPath()
+        If Not IsAviSynth() Then
+            Exit Sub
         End If
 
-        Return True
+        If IsffmpegUsed() Then
+            If IsAviSynthSystemInstalled() AndAlso Not IsAviSynthPortable() Then
+                Dim targetFolder = Folder.Startup + "Apps\Encoders\ffmpeg\"
+                FolderHelp.Create(targetFolder)
+                MoveFiles(Package.ffmpeg.Directory, targetFolder, {Package.ffmpeg.Filename, "ffmpeg Help.txt"})
+            Else
+                MoveFiles(Package.ffmpeg.Directory, Package.AviSynth.Directory, {Package.ffmpeg.Filename, "ffmpeg Help.txt"})
+            End If
+        End If
+
+        If TypeOf p.VideoEncoder Is x264Enc Then
+            If IsAviSynthPortable() Then
+                If IsAviSynthSystemInstalled() AndAlso Not Package.x264.Directory.PathEquals(Package.AviSynth.Directory) AndAlso
+                    Not CommandLineContainsAvsDllPath() Then
+
+                    MoveFiles(Package.x264.Directory, Package.AviSynth.Directory, {Package.x264.Filename, "x264 Help.txt"})
+                End If
+            Else
+                If Package.x264.Directory.PathEquals(Package.AviSynth.Directory) Then
+                    Dim targetFolder = Folder.Startup + "Apps\Encoders\x264\"
+                    FolderHelp.Create(targetFolder)
+                    MoveFiles(Package.x264.Directory, targetFolder, {Package.x264.Filename, "x264 Help.txt"})
+                End If
+            End If
+        End If
+
+        If TypeOf p.VideoEncoder Is x265Enc Then
+            If IsAviSynthPortable() Then
+                If IsAviSynthSystemInstalled() AndAlso Not Package.x265.Directory.PathEquals(Package.AviSynth.Directory) AndAlso
+                    Not CommandLineContainsAvsDllPath() Then
+
+                    MoveFiles(Package.x265.Directory, Package.AviSynth.Directory, {Package.x265.Filename, "x265 Help.txt"})
+                End If
+            Else
+                If Package.x265.Directory.PathEquals(Package.AviSynth.Directory) Then
+                    Dim targetFolder = Folder.Startup + "Apps\Encoders\x265\"
+                    FolderHelp.Create(targetFolder)
+                    MoveFiles(Package.x265.Directory, targetFolder, {Package.x265.Filename, "x265 Help.txt"})
+                End If
+            End If
+        End If
+    End Sub
+
+    Shared Function CommandLineContainsAvsDllPath() As Boolean
+        Return p.VideoEncoder.GetCommandLine(True, True).ContainsEx(Package.AviSynth.Path)
     End Function
 End Class
 
@@ -535,126 +566,3 @@ Public Enum FrameServerMode
     <DispName("Use installed directly")> Installed
     <DispName("Use installed via VFW")> VFW
 End Enum
-
-Public Class SoftLink
-    Property Link As String
-    Property Target As String
-
-    Shared Property Key As String = "Software\StaxRip\SoftLink"
-
-    Sub New(link As String, target As String)
-        Me.Link = link
-        Me.Target = target
-    End Sub
-
-    ReadOnly Property IsValid As Boolean
-        Get
-            Return IsLengthZero() AndAlso Not IsDead()
-        End Get
-    End Property
-
-    ReadOnly Property IsLengthZero As Boolean
-        Get
-            Return Link.FileExists AndAlso New FileInfo(Link).Length = 0
-        End Get
-    End Property
-
-    ReadOnly Property IsDead As Boolean
-        Get
-            Return Not Registry.CurrentUser.GetString(Key, Link).IsEqualIgnoreCase(Target)
-        End Get
-    End Property
-
-    Sub Create()
-        Delete()
-
-        '2: SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
-        'return value does not work due to OS bug
-        CreateSymbolicLink(Link, Target, 2)
-
-        If IsLengthZero() Then
-            Registry.CurrentUser.Write(Key, Link, Target)
-        Else
-            Throw New Exception("Failed to create soft link." + BR2 + Link)
-        End If
-    End Sub
-
-    Sub Delete()
-        Try
-            If Link.FileExists Then
-                File.Delete(Link)
-                Registry.CurrentUser.DeleteValue(Key, Link)
-            End If
-        Catch ex As Exception
-            Throw New Exception("Failed to delete soft link." + BR2 + Link + BR2 + ex.Message)
-        End Try
-    End Sub
-
-    'return value does not work due to OS bug
-    <DllImport("kernel32.dll", CharSet:=CharSet.Unicode)>
-    Shared Function CreateSymbolicLink(link As String, target As String, flags As Integer) As Boolean
-    End Function
-
-    Shared Sub CreateLinks(links As SoftLink())
-        CleanRegistry()
-
-        For Each lnk In links
-            If Not lnk.IsValid Then
-                lnk.Create()
-            End If
-        Next
-    End Sub
-
-    Shared Sub CleanRegistry()
-        For Each lnk In Registry.CurrentUser.GetValueNames(Key)
-            If Not lnk.FileExists OrElse Not Registry.CurrentUser.GetString(Key, lnk).FileExists Then
-                Registry.CurrentUser.DeleteValue(Key, lnk)
-            End If
-        Next
-    End Sub
-
-    Shared Sub CreateLinksElevated(links As SoftLink())
-        Dim args = links.Select(Function(pack) """" + pack.Link + "|" + pack.Target + """")
-
-        Using pr As New Process
-            pr.StartInfo.UseShellExecute = True
-            pr.StartInfo.Verb = "runas"
-            pr.StartInfo.FileName = Application.ExecutablePath
-            pr.StartInfo.Arguments = "--create-soft-links " + String.Join(" ", args)
-            pr.Start()
-            pr.WaitForExit()
-
-            If pr.ExitCode = 0 Then
-                MsgInfo("Soft link creation succeeded.")
-            Else
-                MsgError("Soft link creation failed.")
-            End If
-        End Using
-    End Sub
-
-    Shared Sub CreateLinksElevated(args As IEnumerable(Of String))
-        For Each pair In args
-            Dim lnk As New SoftLink(pair.Left("|"), pair.Right("|"))
-
-            If Not lnk.IsValid Then
-                lnk.Create()
-            End If
-        Next
-    End Sub
-
-    Shared Sub DeleteLinks(links As SoftLink())
-        For Each lnk In links
-            lnk.Delete()
-        Next
-    End Sub
-
-    Shared Function AreLinksValid(links As SoftLink()) As Boolean
-        For Each lnk In links
-            If Not lnk.IsValid Then
-                Return False
-            End If
-        Next
-
-        Return True
-    End Function
-End Class

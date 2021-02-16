@@ -8,6 +8,7 @@ Public Class ApplicationSettings
     Public AllowCustomPathsInStartupFolder As Boolean
     Public AllowToolsWithWrongVersion As Boolean
     Public AudioProfiles As List(Of AudioProfile)
+    Public AutoSaveProject As Boolean
     Public AviSynthFilterPreferences As StringPairList
     Public AviSynthMode As FrameServerMode
     Public AviSynthProfiles As List(Of FilterCategory)
@@ -22,6 +23,7 @@ Public Class ApplicationSettings
     Public CmdlPresetsX264 As String
     Public ConvertChromaSubsampling As Boolean = True
     Public CropFrameCount As Integer
+    Public CustomMenuCodeEditor As CustomMenuItem
     Public CustomMenuCrop As CustomMenuItem
     Public CustomMenuMainForm As CustomMenuItem
     Public CustomMenuPreview As CustomMenuItem
@@ -33,6 +35,7 @@ Public Class ApplicationSettings
     Public EnableTooltips As Boolean
     Public EventCommands As List(Of EventCommand)
     Public FilterSetupProfiles As List(Of TargetVideoScript)
+    Public FixFrameRate As Boolean = True
     Public HidePreviewButtons As Boolean
     Public IconFile As String
     Public LastPosition As Integer
@@ -51,7 +54,7 @@ Public Class ApplicationSettings
     Public PreviewFormBorderStyle As FormBorderStyle
     Public PreviewSize As Integer = 70
     Public ProcessPriority As ProcessPriorityClass = ProcessPriorityClass.Idle
-    Public ProgressOutputCustomize As Boolean = False
+    Public ProgressOutputCustomize As Boolean = True
     Public ProjectsMruNum As Integer = 10
     Public RecentFramePositions As List(Of String)
     Public RecentOptionsPage As String
@@ -273,6 +276,10 @@ Public Class ApplicationSettings
 
         If Check(CustomMenuPreview, "Menu in preview dialog", 54) Then
             CustomMenuPreview = PreviewForm.GetDefaultMenu()
+        End If
+
+        If Check(CustomMenuCodeEditor, "Menu in code editor", 21) Then
+            CustomMenuCodeEditor = CodeEditor.GetDefaultMenu()
         End If
 
         If Check(CustomMenuSize, "Target size menu in main dialog", 31) Then

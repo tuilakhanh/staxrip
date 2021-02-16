@@ -52,10 +52,10 @@ Public Class NVEnc
                                         SaveProfile(enc)
                                     End Sub
 
-            form.cms.Items.Add(New ActionMenuItem("Check Hardware", Sub() MsgInfo(ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-hw"))))
-            form.cms.Items.Add(New ActionMenuItem("Check Features", Sub() g.ShowCode("Check Features", ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-features"))))
-            form.cms.Items.Add(New ActionMenuItem("Check Environment", Sub() g.ShowCode("Check Environment", ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-environment"))))
-            ActionMenuItem.Add(form.cms.Items, "Save Profile...", saveProfileAction).SetImage(Symbol.Save)
+            form.cms.Items.Add(New MenuItemEx("Check Hardware", Sub() MsgInfo(ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-hw"))))
+            form.cms.Items.Add(New MenuItemEx("Check Features", Sub() g.ShowCode("Check Features", ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-features"))))
+            form.cms.Items.Add(New MenuItemEx("Check Environment", Sub() g.ShowCode("Check Environment", ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-environment"))))
+            MenuItemEx.Add(form.cms.Items, "Save Profile...", saveProfileAction).SetImage(Symbol.Save)
 
             If form.ShowDialog() = DialogResult.OK Then
                 Params = newParams
@@ -71,6 +71,10 @@ Public Class NVEnc
         End Get
     End Property
 
+    Overrides Function GetFixedBitrate() As Integer
+        Return CInt(Params.Bitrate.Value)
+    End Function
+
     Overrides Sub Encode()
         If OutputExt = "h265" Then
             Dim codecs = ProcessHelp.GetConsoleOutput(Package.NVEnc.Path, "--check-hw").Right("Codec(s)")
@@ -80,7 +84,7 @@ Public Class NVEnc
             End If
         End If
 
-        p.Script.Synchronize()
+        p.Script.Synchronize(False, True, False, TextEncoding.EncodingOfProcess)
 
         Using proc As New Proc
             proc.Header = "Video encoding"
@@ -123,14 +127,14 @@ Public Class NVEnc
         tester.IgnoredSwitches = "help version check-device input-analyze input-format output-format
             video-streamid video-track vpp-delogo vpp-delogo-cb vpp-delogo-cr vpp-delogo-depth output
             vpp-delogo-pos vpp-delogo-select vpp-delogo-y check-avversion check-codecs caption2ass log
-            check-encoders check-decoders check-formats check-protocols log-framelist fps
-            check-filters input raw avs vpy vpy-mt key-on-chapter audio-delay audio-ignore-decode-error
+            check-encoders check-decoders check-formats check-protocols log-framelist fps audio-delay
+            check-filters input raw avs vpy vpy-mt key-on-chapter video-tag audio-ignore-decode-error
             avcuvid-analyze audio-source audio-file seek format audio-copy audio-ignore-notrack-error
             audio-copy audio-codec vpp-perf-monitor avi audio-profile check-profiles avsync mux-option
             audio-bitrate audio-ignore audio-ignore audio-samplerate audio-resampler audio-stream dar
             audio-stream audio-stream audio-stream audio-filter chapter-copy chapter sub-copy input-res
-            audio-disposition audio-metadata option-list sub-disposition sub-metadata
-            metadata video-metadata video-tag attachment-copy chapter-no-trim"
+            audio-disposition audio-metadata option-list sub-disposition sub-metadata process-codepage
+            metadata attachment-copy chapter-no-trim video-metadata"
 
         tester.UndocumentedSwitches = "cbrhq vbrhq"
         tester.Package = Package.NVEnc
@@ -209,6 +213,13 @@ Public Class NVEnc
             .Text = "Show advanced QP settings",
             .VisibleFunc = Function() Mode.Value = 0
         }
+
+        Property Bitrate As New NumParam With {
+            .Switches = {"--cbr", "--cbrhq", "--vbr", "--vbrhq"},
+            .Text = "Bitrate",
+            .Init = p.VideoBitrate,
+            .VisibleFunc = Function() Mode.Value > 0,
+            .Config = {0, 1000000, 100}}
 
         Property QP As New NumParam With {
             .Switches = {"--cqp"},
@@ -364,6 +375,13 @@ Public Class NVEnc
         Property UnsharpWeight As New NumParam With {.Text = "     Weight", .HelpSwitch = "--vpp-unsharp", .Init = 0.5, .Config = {0, 10, 0.5, 1}}
         Property UnsharpThreshold As New NumParam With {.Text = "     Threshold", .HelpSwitch = "--vpp-unsharp", .Init = 10, .Config = {0, 255, 1, 1}}
 
+        Property Warpsharp As New BoolParam With {.Text = "Warpsharp filter", .Switches = {"--vpp-warpsharp"}, .ArgsFunc = AddressOf GetWarpsharpArgs}
+        Property WarpsharpThreshold As New NumParam With {.Text = "     Threshold", .HelpSwitch = "--vpp-warpsharp", .Init = 128, .Config = {0, 255, 1, 1}}
+        Property WarpsharpBlur As New NumParam With {.Text = "     Blur", .HelpSwitch = "--vpp-warpsharp", .Init = 2, .Config = {0, 30, 1, 0}}
+        Property WarpsharpType As New NumParam With {.Text = "     Type", .HelpSwitch = "--vpp-warpsharp", .Init = 0, .Config = {0, 1, 1, 0}}
+        Property WarpsharpDepth As New NumParam With {.Text = "     Depth", .HelpSwitch = "--vpp-warpsharp", .Init = 16, .Config = {-128, 128, 1, 1}}
+        Property WarpsharpChroma As New NumParam With {.Text = "     Chroma", .HelpSwitch = "--vpp-warpsharp", .Init = 0, .Config = {0, 1, 1, 0}}
+
         Property NnediField As New OptionParam With {.Text = "Field", .HelpSwitch = "--vpp-nnedi", .Options = {"auto", "top", "bottom"}, .VisibleFunc = Function() Deinterlacer.Value = 3}
         Property NnediNns As New OptionParam With {.Text = "NNS", .HelpSwitch = "--vpp-nnedi", .Init = 1, .Options = {"16", "32", "64", "128", "256"}, .VisibleFunc = Function() Deinterlacer.Value = 3}
         Property NnediNsize As New OptionParam With {.Text = "N Size", .HelpSwitch = "--vpp-nnedi", .Init = 6, .Options = {"8x6", "16x6", "32x6", "48x6", "8x4", "16x4", "32x4"}, .VisibleFunc = Function() Deinterlacer.Value = 3}
@@ -430,7 +448,7 @@ Public Class NVEnc
                         New OptionParam With {.Switch = "--input-csp", .Text = "Input Colorspace", .Init = 1, .Options = {"NV12", "YV12", "YUV420P", "YUV422P", "YUV444P", "YUV420P9LE", "YUV420P10LE", "YUV420P12LE", "YUV420P14LE", "YUV420P16LE", "P010", "YUV422P9LE", "YUV422P10LE", "YUV422P12LE", "YUV422P14LE", "YUV422P16LE", "YUV444P9LE", "YUV444P10LE", "YUV444P12LE", "YUV444P14LE", "YUV444P16LE"}},
                         Interlace,
                         New OptionParam With {.Switch = "--output-depth", .Text = "Depth", .Options = {"8-Bit", "10-Bit"}, .Values = {"8", "10"}},
-                        QPAdvanced, QP, QPI, QPP, QPB)
+                        QPAdvanced, Bitrate, QP, QPI, QPP, QPB)
                     Add("Rate Control",
                         New StringParam With {.Switch = "--dynamic-rc", .Text = "Dynamic RC"},
                         New NumParam With {.Switch = "--qp-init", .Text = "Initial QP", .Config = {0, Integer.MaxValue, 1}},
@@ -466,18 +484,8 @@ Public Class NVEnc
                     Add("VPP | Misc",
                         New StringParam With {.Switch = "--vpp-subburn", .Text = "Subburn"},
                         New OptionParam With {.Switch = "--vpp-resize", .Text = "Resize", .Options = {"Disabled", "Default", "Bilinear", "Cubic", "Cubic_B05C03", "Cubic_bSpline", "Cubic_Catmull", "Lanczos", "NN", "NPP_Linear", "Spline 36", "Super"}},
-                        New OptionParam With {.Switch = "--vpp-gauss", .Text = "Gauss", .Options = {"Disabled", "3", "5", "7"}},
                         New OptionParam With {.Switch = "--vpp-rotate", .Text = "Rotate", .Options = {"Disabled", "90", "180", "270"}},
                         New BoolParam With {.Switch = "--vpp-rff", .Text = "Enable repeat field flag", .VisibleFunc = Function() Decoder.ValueText.EqualsAny("nvhw", "nvsw")},
-                        Edgelevel,
-                        EdgelevelStrength,
-                        EdgelevelThreshold,
-                        EdgelevelBlack,
-                        EdgelevelWhite,
-                        Unsharp,
-                        UnsharpRadius,
-                        UnsharpWeight,
-                        UnsharpThreshold,
                         SelectEvery,
                         SelectEveryValue,
                         SelectEveryOffsets)
@@ -555,6 +563,11 @@ Public Class NVEnc
                     Add("VPP | Denoise",
                         Knn, KnnRadius, KnnStrength, KnnLerp, KnnThLerp,
                         Pmd, PmdApplyCount, PmdStrength, PmdThreshold)
+                    Add("VPP | Sharpness",
+                        New OptionParam With {.Switch = "--vpp-gauss", .Text = "Gauss", .Options = {"Disabled", "3", "5", "7"}},
+                        Edgelevel, EdgelevelStrength, EdgelevelThreshold, EdgelevelBlack, EdgelevelWhite,
+                        Unsharp, UnsharpRadius, UnsharpWeight, UnsharpThreshold,
+                        Warpsharp, WarpsharpThreshold, WarpsharpBlur, WarpsharpType, WarpsharpDepth, WarpsharpChroma)
                     Add("VUI",
                         New StringParam With {.Switch = "--master-display", .Text = "Master Display", .VisibleFunc = Function() Codec.ValueText = "h265"},
                         New StringParam With {.Switch = "--sar", .Text = "Sample Aspect Ratio", .Init = "auto", .Menu = s.ParMenu, .ArgsFunc = AddressOf GetSAR},
@@ -630,6 +643,8 @@ Public Class NVEnc
                 Next
             End If
 
+            p.VideoBitrate = CInt(Bitrate.Value)
+
             If Not QPI.NumEdit Is Nothing Then
                 NnediField.MenuButton.Enabled = Deinterlacer.Value = 3
                 NnediNns.MenuButton.Enabled = Deinterlacer.Value = 3
@@ -673,6 +688,12 @@ Public Class NVEnc
                 UnsharpRadius.NumEdit.Enabled = Unsharp.Value
                 UnsharpWeight.NumEdit.Enabled = Unsharp.Value
                 UnsharpThreshold.NumEdit.Enabled = Unsharp.Value
+
+                WarpsharpBlur.NumEdit.Enabled = Warpsharp.Value
+                WarpsharpChroma.NumEdit.Enabled = Warpsharp.Value
+                WarpsharpDepth.NumEdit.Enabled = Warpsharp.Value
+                WarpsharpThreshold.NumEdit.Enabled = Warpsharp.Value
+                WarpsharpType.NumEdit.Enabled = Warpsharp.Value
 
                 SelectEveryValue.NumEdit.Enabled = SelectEvery.Value
                 SelectEveryOffsets.TextEdit.Enabled = SelectEvery.Value
@@ -835,24 +856,36 @@ Public Class NVEnc
             End If
         End Function
 
+        Function GetEdge() As String
+            If Edgelevel.Value Then
+                Dim ret = ""
+                If EdgelevelStrength.Value <> EdgelevelStrength.DefaultValue Then ret += ",strength=" & EdgelevelStrength.Value.ToInvariantString
+                If EdgelevelThreshold.Value <> EdgelevelThreshold.DefaultValue Then ret += ",threshold=" & EdgelevelThreshold.Value.ToInvariantString
+                If EdgelevelBlack.Value <> EdgelevelBlack.DefaultValue Then ret += ",black=" & EdgelevelBlack.Value.ToInvariantString
+                If EdgelevelWhite.Value <> EdgelevelWhite.DefaultValue Then ret += ",white=" & EdgelevelWhite.Value.ToInvariantString
+                Return "--vpp-edgelevel " + ret.TrimStart(","c)
+            End If
+        End Function
+
         Function GetUnsharp() As String
             If Unsharp.Value Then
                 Dim ret = ""
-                If UnsharpRadius.Value <> UnsharpRadius.DefaultValue Then ret += ",radius=" & UnsharpRadius.Value
+                If UnsharpRadius.Value <> UnsharpRadius.DefaultValue Then ret += ",radius=" & UnsharpRadius.Value.ToInvariantString
                 If UnsharpWeight.Value <> UnsharpWeight.DefaultValue Then ret += ",weight=" & UnsharpWeight.Value.ToInvariantString
-                If UnsharpThreshold.Value <> UnsharpThreshold.DefaultValue Then ret += ",threshold=" & UnsharpThreshold.Value
+                If UnsharpThreshold.Value <> UnsharpThreshold.DefaultValue Then ret += ",threshold=" & UnsharpThreshold.Value.ToInvariantString
                 Return "--vpp-unsharp " + ret.TrimStart(","c)
             End If
         End Function
 
-        Function GetEdge() As String
-            If Edgelevel.Value Then
+        Function GetWarpsharpArgs() As String
+            If Warpsharp.Value Then
                 Dim ret = ""
-                If EdgelevelStrength.Value <> EdgelevelStrength.DefaultValue Then ret += ",strength=" & EdgelevelStrength.Value
-                If EdgelevelThreshold.Value <> EdgelevelThreshold.DefaultValue Then ret += ",threshold=" & EdgelevelThreshold.Value
-                If EdgelevelBlack.Value <> EdgelevelBlack.DefaultValue Then ret += ",black=" & EdgelevelBlack.Value
-                If EdgelevelWhite.Value <> EdgelevelWhite.DefaultValue Then ret += ",white=" & EdgelevelWhite.Value
-                Return "--vpp-edgelevel " + ret.TrimStart(","c)
+                If WarpsharpThreshold.Value <> WarpsharpThreshold.DefaultValue Then ret += ",threshold=" & WarpsharpThreshold.Value.ToInvariantString
+                If WarpsharpBlur.Value <> WarpsharpBlur.DefaultValue Then ret += ",blur=" & WarpsharpBlur.Value.ToInvariantString
+                If WarpsharpType.Value <> WarpsharpType.DefaultValue Then ret += ",type=" & WarpsharpType.Value.ToInvariantString
+                If WarpsharpDepth.Value <> WarpsharpDepth.DefaultValue Then ret += ",depth=" & WarpsharpDepth.Value.ToInvariantString
+                If WarpsharpChroma.Value <> WarpsharpChroma.DefaultValue Then ret += ",chroma=" & WarpsharpChroma.Value.ToInvariantString
+                Return "--vpp-warpsharp " + ret.TrimStart(","c)
             End If
         End Function
 
@@ -915,19 +948,19 @@ Public Class NVEnc
         End Function
 
         Function GetModeArgs() As String
-            Dim bitrate = If(ConstantQualityMode.Value, 0, p.VideoBitrate)
+            Dim rate = If(ConstantQualityMode.Value, 0, Bitrate.Value)
 
             Select Case Mode.Value
                 Case 0
                     Return If(QPAdvanced.Value, $"--cqp {QPI.Value}:{QPP.Value}:{QPB.Value}", $" --cqp {QP.Value}")
                 Case 1
-                    Return "--cbr " & p.VideoBitrate
+                    Return "--cbr " & rate
                 Case 2
-                    Return "--cbrhq " & p.VideoBitrate
+                    Return "--cbrhq " & rate
                 Case 3
-                    Return "--vbr " & bitrate
+                    Return "--vbr " & rate
                 Case 4
-                    Return "--vbrhq " & bitrate
+                    Return "--vbrhq " & rate
             End Select
         End Function
 
@@ -946,7 +979,7 @@ Public Class NVEnc
                 Case "avs"
                     sourcePath = p.Script.Path
 
-                    If includePaths AndAlso FrameServerHelp.IsAviSynthPortableUsed Then
+                    If includePaths AndAlso FrameServerHelp.IsPortable Then
                         ret += " --avsdll " + Package.AviSynth.Path.Escape
                     End If
                 Case "nvhw"

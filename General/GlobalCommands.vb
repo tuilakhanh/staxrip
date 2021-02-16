@@ -8,6 +8,8 @@ Imports DirectN
 Imports Microsoft.Win32
 Imports StaxRip.UI
 
+Imports VB6 = Microsoft.VisualBasic
+
 Public Class GlobalCommands
     <Command("Checks if a update is available.")>
     Sub CheckForUpdate()
@@ -96,6 +98,15 @@ Public Class GlobalCommands
     <Command("Runs all active jobs of the job list.")>
     Sub StartJobs()
         g.ProcessJobs()
+    End Sub
+
+    <Command("Placeholder for dynamically updated menu items.")>
+    Sub DynamicMenuItem(<DispName("ID")> id As DynamicMenuItemID)
+    End Sub
+
+    <Command("Dialog that shows available macros.")>
+    Sub ShowMacrosDialog()
+        MacrosForm.ShowDialogForm()
     End Sub
 
     <Command("Executes a command line. If Shell Execute is disabled then macros are passed in as environment variables.")>
@@ -271,7 +282,7 @@ Public Class GlobalCommands
         Select Case topic
             Case "info"
                 form.Doc.WriteStart("StaxRip " + Application.ProductVersion + " " + GetReleaseType())
-                form.Doc.Write("Contributions 2020", "stax76, Dendraspis, 44vince44, Patman, JKyle, qyot27")
+                form.Doc.Write("Contributions 2020", "stax76, Dendraspis, 44vince44, Patman, JKyle, DJATOM")
                 form.Doc.Write("Contributions Before 2020", "stax76, Revan654, 44vince44, Patman, NikosD, ernst, Brother John, Freepik, ilko-k, nulledone, vanontom")
 
                 Dim licensePath = Folder.Startup + "License.txt"

@@ -45,6 +45,22 @@ Public MustInherit Class AudioProfile
         OutputFileType = fileType
     End Sub
 
+    ReadOnly Property AudioCodec As AudioCodec
+        Get
+            If TypeOf Me Is GUIAudioProfile Then
+                Return DirectCast(Me, GUIAudioProfile).Params.Codec
+            End If
+
+            For Each i As AudioCodec In System.Enum.GetValues(GetType(AudioCodec))
+                If i.ToString.ToLower = OutputFileType Then
+                    Return i
+                End If
+            Next
+
+            Return AudioCodec.None
+        End Get
+    End Property
+
     Private FileValue As String = ""
 
     Property File As String
@@ -91,13 +107,19 @@ Public MustInherit Class AudioProfile
 
     Property DisplayName As String
         Get
-            Dim ret = ""
+            Dim ret As String
 
             If Stream Is Nothing Then
                 Dim streams = MediaInfo.GetAudioStreams(File)
 
                 If streams.Count > 0 Then
-                    ret = GetAudioText(streams(0), File)
+                    Dim firstStream = streams(0)
+
+                    If firstStream.Bitrate = 0 AndAlso firstStream.Bitrate2 = 0 Then
+                        firstStream.Bitrate = CInt(Calc.GetBitrateFromFile(File, p.SourceSeconds))
+                    End If
+
+                    ret = GetAudioText(firstStream, File)
                 Else
                     ret = File.FileName
                 End If
@@ -327,14 +349,16 @@ Public MustInherit Class AudioProfile
         Return outfile
     End Function
 
-    Shared Function GetProfiles() As List(Of AudioProfile)
-        Dim ret As New List(Of AudioProfile)
-
-        ret.Add(p.Audio0)
-        ret.Add(p.Audio1)
-        ret.AddRange(p.AudioTracks)
-
-        Return ret
+    Shared Function GetProfiles() As IEnumerable(Of AudioProfile)
+        If p.AudioTracks.Count = 0 Then
+            Return {p.Audio0, p.Audio1}
+        Else
+            Dim ret As New List(Of AudioProfile)
+            ret.Add(p.Audio0)
+            ret.Add(p.Audio1)
+            ret.AddRange(p.AudioTracks)
+            Return ret
+        End If
     End Function
 
     Function ExpandMacros(value As String) As String
@@ -556,7 +580,13 @@ Public Class MuxAudioProfile
 
     Sub SetBitrate()
         If Stream Is Nothing Then
-            Bitrate = Calc.GetBitrateFromFile(File, p.SourceSeconds)
+            Dim temp = CInt(MediaInfo.GetAudio(File, "BitRate").ToInt / 1000)
+
+            If temp > 0 Then
+                Bitrate = temp
+            Else
+                Bitrate = Calc.GetBitrateFromFile(File, p.SourceSeconds)
+            End If
         Else
             Bitrate = Stream.Bitrate + Stream.Bitrate2
         End If
@@ -903,10 +933,6 @@ Public Class GUIAudioProfile
                     sb.Append(" -quality=" & Params.Quality.ToInvariantString)
                 Case AudioCodec.AC3
                     sb.Append(" -" & Bitrate)
-
-                    If Not {192, 224, 384, 448, 640}.Contains(CInt(Bitrate)) Then
-                        Return "Invalid bitrate, select 192, 224, 384, 448 or 640"
-                    End If
                 Case AudioCodec.DTS
                     sb.Append(" -" & Bitrate)
             End Select
@@ -1163,10 +1189,6 @@ Public Class GUIAudioProfile
             Case AudioCodec.AC3
                 If Not Params.CustomSwitches.Contains("-c:a ") Then
                     sb.Append(" -c:a ac3")
-                End If
-
-                If Not {192, 224, 384, 448, 640}.Contains(CInt(Bitrate)) Then
-                    Return "Invalid bitrate, select 192, 224, 384, 448 or 640"
                 End If
 
                 sb.Append(" -b:a " & CInt(Bitrate) & "k")
@@ -1563,6 +1585,7 @@ Public Enum AudioCodec
     W64
     WAV
     EAC3
+    None
 End Enum
 
 Public Enum AudioRateMode

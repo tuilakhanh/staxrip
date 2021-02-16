@@ -106,19 +106,19 @@ Tools
     "7zip","Console App","7za.exe","19.0","2019-02-21"
     "aomenc","Console App","aomenc.exe","2.0.1-1118-gbe4ee75fd-x64-msvc1929 Patman","2020-12-23"
     "AutoCrop","Console App","AutoCrop.exe","2.1.0.0","2020-12-30"
-    "avs2pipemod","Console App","avs2pipemod64.exe","1.1.1","2016-08-14"
+    "avs2pipemod","Console App","avs2pipemod64.exe","1.1.1 UTF8 + long path Mod","2021-02-04"
     "AVSMeter","Console App","AVSMeter64.exe","3.0.7.0","2020-11-16"
     "eac3to","Console App","eac3to.exe","3.34","2017-11-19"
     "fdkaac","Console App","fdkaac.exe","1.0.0","2019-02-13"
     "ffmpeg","Console App","ffmpeg.exe","N-100448-gab6a56773f-x64-gcc10.2.0 Patman","2020-12-20"
     "ffmpeg non-free","Console App","ffmpeg.exe","","2020-08-30"
-    "mkvextract","Console App","mkvextract.exe","52","2021-01-04"
-    "mkvinfo","Console App","mkvinfo.exe","52","2021-01-04"
-    "mkvmerge","Console App","mkvmerge.exe","52","2021-01-04"
-    "MP4Box","Console App","MP4Box.exe","1.1.0-rev447-g8c190b551-gcc10.2.0 Patman","2021-01-15"
+    "mkvextract","Console App","mkvextract.exe","53","2021-01-30"
+    "mkvinfo","Console App","mkvinfo.exe","53","2021-01-30"
+    "mkvmerge","Console App","mkvmerge.exe","53","2021-01-30"
+    "MP4Box","Console App","MP4Box.exe","1.1.0 rev506 gcc10.2 Patman","2021-02-11"
     "mtn","Console App","mtn.exe","2.0.1","2019-06-27"
     "NeroAAC","Console App","neroAacEnc.exe","","2010-02-18"
-    "NVEnc","Console App","NVEncC64.exe","5.25","2021-01-10"
+    "NVEnc","Console App","NVEncC64.exe","5.29","2021-02-14"
     "PNGopt","Console App","apngopt.exe","1.4","2019-01-01"
     "Python","Console App","python.exe","3.8.5150","2020-07-20"
     "qaac","Console App","qaac64.exe","2.71","2020-10-02"
@@ -127,17 +127,16 @@ Tools
     "SVT-AV1","Console App","SvtAv1EncApp.exe","0.8.6","2020-11-29"
     "VCEEnc","Console App","VCEEncC64.exe","6.07","2020-11-23"
     "vspipe","Console App","vspipe.exe","r52","2020-08-20"
-    "x264","Console App","x264.exe","M-0.161.3027-4121277-x64-gcc10.2.0 Patman","2020-12-16"
-    "x265","Console App","x265.exe","3.4+65-aMod-gcc10.2.1 DJATOM Mod","2021-01-24"
+    "x264","Console App","x264.exe","aMod-core161-r3039+17 DJATOM Mod","2021-01-27"
+    "x265","Console App","x265.exe","3.4+70-aMod-gcc10.2.1 DJATOM Mod","2021-02-02"
     "xvid_encraw","Console App","xvid_encraw.exe","1.3.7",""
     "BDSup2Sub++","GUI App","bdsup2sub++.exe","1.0.3","2018-05-09"
     "chapterEditor","GUI App","chapterEditor.exe","1.25","2020-10-04"
     "D2V Witch","GUI App","d2vwitch.exe","v5",""
     "DGIndex","GUI App","DGIndex.exe","2.0.0.2","2021-01-12"
     "MediaInfo.NET","GUI App","MediaInfoNET.exe","6.8.0.0","2020-12-13"
-    "MKVToolnix GUI","GUI App","mkvtoolnix-gui.exe","52","2021-01-04"
-    "MPC-BE","GUI App","mpc-be64.exe","",""
-    "MPC-HC","GUI App","mpc-hc64.exe","","2017-07-16"
+    "MKVToolnix GUI","GUI App","mkvtoolnix-gui.exe","53","2021-01-30"
+    "MPC","GUI App","mpc-be64.exe","","2020-12-09"
     "mpv.net","GUI App","mpvnet.exe","5.4.8.6","2020-12-30"
     "Subtitle Edit","GUI App","SubtitleEdit.exe","3.5.18","2020-11-09"
     "VSRip","GUI App","VSRip.exe","1.0.0.7","2011-07-14"
@@ -147,9 +146,10 @@ Tools
     "FFTW","Library","libfftw3-3.dll","3.3.8","2018-12-20"
     "MediaInfo","Library","MediaInfo.dll","20.09","2020-10-09"
     "VapourSynth","Library","vapoursynth.dll","r52","2020-08-20"
+    "Visual C++ 2010","Library","msvcp100.dll","","2011-06-11"
     "Visual C++ 2012","Library","msvcp110.dll","","2012-11-05"
     "Visual C++ 2013","Library","msvcp120.dll","","2016-02-10"
-    "Visual C++ 2019","Library","msvcp140.dll","","2020-11-11"
+    "Visual C++ 2015-2019","Library","msvcp140.dll","14.28.29334","2020-11-11"
     "Get-MediaInfo","Misc","Get-MediaInfo.ps1","3.5","2021-01-10"
     "Haali Splitter","Misc","splitter.ax","",""
     "AWarpSharp2","VapourSynth Plugin","libawarpsharp2.dll","2018-06-18","2019-01-01"
@@ -410,9 +410,9 @@ http://www.vapoursynth.com
 x264
 ~~~~
 
-H.264 video encoding console app. Patman mod supports vpy input and shows the estimated size in the status line.
+H.264 video encoding console app.
 
-http://www.videolan.org/developers/x264.html
+https://github.com/DJATOM/x264-aMod
 
 
 x265
@@ -481,20 +481,12 @@ MKV muxing/demuxing GUI app.
 https://mkvtoolnix.download
 
 
-MPC-BE
-~~~~~~
+MPC
+~~~
 
 DirectShow based media player (GUI app).
 
 https://sourceforge.net/projects/mpcbe
-
-
-MPC-HC
-~~~~~~
-
-DirectShow based media player (GUI app).
-
-https://mpc-hc.org
 
 
 mpv.net
@@ -570,7 +562,7 @@ AvsResize
 
 Filters: z_ConvertFormat, z_PointResize, z_BilinearResize, z_BicubicResize, z_LanczosResize, z_Lanczos4Resize, z_Spline16Resize, z_Spline36Resize, z_Spline64Resize
 
-http://forum.doom9.org/showthread.php?t=173986
+http://avisynth.nl/index.php/Avsresize
 
 
 AVSTP
@@ -790,7 +782,7 @@ Similar algorithm to FFT3DFilter, but uses graphics hardware for increased speed
 
 Filters: FFT3DGPU
 
-
+https://github.com/pinterf/FFT3dGPU
 
 
 flash3kyuu_deband

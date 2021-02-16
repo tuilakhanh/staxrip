@@ -129,7 +129,10 @@ Public Class Calc
 
     Shared Function GetBitrateFromFile(path As String, seconds As Integer) As Double
         Try
-            If path = "" OrElse seconds = 0 Then Return 0
+            If path = "" OrElse seconds = 0 Then
+                Return 0
+            End If
+
             Dim kBits = New FileInfo(path).Length * 8 / 1000
             Return kBits / seconds
         Catch ex As Exception
@@ -904,6 +907,10 @@ Public Enum DynamicMenuItemID
     TemplateProjects
     HelpApplications
     Scripts
+    AddFilters
+    InsertFilters
+    ReplaceFilters
+    FilterCategory
 End Enum
 
 Public Class Startup
@@ -912,20 +919,6 @@ Public Class Startup
         AddHandler AppDomain.CurrentDomain.UnhandledException, AddressOf g.OnUnhandledException
         Application.EnableVisualStyles()
         Application.SetCompatibleTextRenderingDefault(False)
-
-        Dim args = Environment.GetCommandLineArgs
-
-        If args.Count > 2 AndAlso args(1) = "--create-soft-links" Then
-            Try
-                SoftLink.CreateLinksElevated(args.Skip(2))
-            Catch ex As Exception
-                MsgError(ex.Message)
-                Environment.ExitCode = 1
-            End Try
-
-            Exit Sub
-        End If
-
         Application.Run(New MainForm())
     End Sub
 End Class
@@ -990,25 +983,26 @@ End Class
 
 <Serializable>
 Public Class AudioStream
+    Property [Default] As Boolean
     Property BitDepth As Integer
     Property Bitrate As Integer
     Property Bitrate2 As Integer
     Property Channels As Integer
     Property Channels2 As Integer
     Property Delay As Integer
+    Property Enabled As Boolean = True
+    Property Forced As Boolean
     Property Format As String
-    Property FormatString As String
     Property FormatProfile As String
+    Property FormatString As String
     Property ID As Integer
-    Property StreamOrder As Integer
     Property Index As Integer
     Property Language As Language
-    Property SamplingRate As Integer
-    Property Title As String
-    Property Enabled As Boolean = True
-    Property [Default] As Boolean
-    Property Forced As Boolean
     Property Lossy As Boolean
+    Property SamplingRate As Integer
+    Property SBR As Boolean
+    Property StreamOrder As Integer
+    Property Title As String
 
     ReadOnly Property Name As String
         Get
@@ -1055,7 +1049,9 @@ Public Class AudioStream
                 End If
             End If
 
-            If BitDepth > 0 AndAlso Not Lossy Then ret += " " & BitDepth & "Bit"
+            If BitDepth > 0 AndAlso Not Lossy Then
+                ret += " " & BitDepth & "Bit"
+            End If
 
             If SamplingRate > 0 Then
                 If SamplingRate Mod 1000 = 0 Then
@@ -3895,9 +3891,12 @@ Public Class TextEncoding
         End If
 
         If commandLine <> "" Then
-            Return commandLine.Contains(".avs") AndAlso ((commandLine.Contains("x264") AndAlso
-                Not g.ContainsPipeTool(commandLine)) OrElse (commandLine.Contains("x265") AndAlso
-                Not g.ContainsPipeTool(commandLine)))
+            Return commandLine.Contains(".avs") AndAlso
+                (commandLine.Contains(Package.NVEnc.Filename) OrElse
+                (commandLine.Contains(Package.x264.Filename) AndAlso
+                (Not g.ContainsPipeTool(commandLine) OrElse commandLine.Contains("avs2pipemod"))) OrElse
+                (commandLine.Contains(Package.x265.Filename) AndAlso
+                (Not g.ContainsPipeTool(commandLine) OrElse commandLine.Contains("avs2pipemod"))))
         End If
     End Function
 End Class

@@ -1,4 +1,5 @@
 ﻿
+Imports System.Text
 Imports StaxRip.CommandLine
 Imports StaxRip.UI
 
@@ -162,7 +163,7 @@ Public Class x264Enc
                                         SaveProfile(enc)
                                     End Sub
 
-            ActionMenuItem.Add(form.cms.Items, "Save Profile...", saveProfileAction).SetImage(Symbol.Save)
+            MenuItemEx.Add(form.cms.Items, "Save Profile...", saveProfileAction).SetImage(Symbol.Save)
 
             If form.ShowDialog() = DialogResult.OK Then
                 AutoCompCheckValue = CInt(newParams.CompCheckAimedQuality.Value)
@@ -798,7 +799,8 @@ Public Class x264Params
                     New NumParam With {.Switch = "--vbv-init", .Text = "VBV Init", .Config = {0.5, 1.0, 0.1, 1}, .Init = 0.9},
                     New NumParam With {.Switch = "--crf-max", .Text = "Maximum CRF"},
                     New NumParam With {.Switch = "--qpmin", .Text = "Minimum QP"},
-                    New NumParam With {.Switch = "--qpmax", .Text = "Maximum QP", .Init = 69})
+                    New NumParam With {.Switch = "--qpmax", .Text = "Maximum QP", .Init = 69},
+                    New NumParam With {.Switch = "--fade-compensate", .Text = "Fade Compensate", .Config = {0, 0, 0.1, 1}})
                 Add("Rate Control 2",
                     New NumParam With {.Switch = "--qpstep", .Text = "QP Step", .Init = 4},
                     New NumParam With {.Switch = "--ratetol", .Text = "Rate Tolerance", .Config = {0, 0, 0.1, 1}, .Init = 1},
@@ -846,6 +848,12 @@ Public Class x264Params
                     DctDecimate,
                     New BoolParam With {.Switch = "--intra-refresh", .Text = "Periodic Intra Refresh instead of IDR frames"},
                     New BoolParam With {.Switch = "--open-gop", .Text = "Open GOP"})
+                Add("Statistic",
+                    New StringParam With {.Switch = "--log-file", .Text = "Log File", .BrowseFile = True},
+                    New OptionParam With {.Switch = "--log-file-level", .Text = "Log File Level", .Options = {"None", "Error", "Warning", "Info", "Debug"}, .Init = 3},
+                    New OptionParam With {.Switch = "--log-level", .Text = "Log Level", .Options = {"None", "Error", "Warning", "Info", "Debug"}},
+                    New BoolParam With {.Switch = "--ssim", .Text = "SSIM"},
+                    New BoolParam With {.Switch = "--psnr", .Text = "PSNR"})
                 Add("VUI",
                     New StringParam With {.Switch = "--sar", .Text = "Sample AR", .Init = "auto", .Menu = s.ParMenu, .ArgsFunc = AddressOf GetSAR},
                     New StringParam With {.Switch = "--crop-rect", .Text = "Crop Rectangle"},
@@ -878,10 +886,10 @@ Public Class x264Params
                     Muxer,
                     New OptionParam With {.Switch = "--fps", .Text = "Frame Rate", .Options = {"Automatic", "24000/1001", "24", "25", "30000/1001", "30", "50", "60000/1001", "60"}})
                 Add("Input/Output 2",
-                    New OptionParam With {.Switch = "--log-level", .Text = "Log Level", .Options = {"None", "Error", "Warning", "Info", "Debug"}},
                     New OptionParam With {.Switch = "--pulldown", .Text = "Pulldown", .Options = {"None", "22", "32", "64", "Double", "Triple", "Euro"}},
                     New OptionParam With {.Switch = "--avcintra-class", .Text = "AVC Intra Class", .Options = {"None", "50", "100", "200"}},
                     New OptionParam With {.Switch = "--avcintra-flavor", .Text = "AVC Intra Flavor", .Options = {"Panasonic", "Sony"}},
+                    New OptionParam With {.Switch = "--opts", .Text = "SEI writing options", .Init = 3, .IntegerValue = True, .Options = {"None", "Information", "Options", "Information and Options"}},
                     New NumParam With {.Switch = "--threads", .Text = "Threads"},
                     New NumParam With {.Switch = "--lookahead-threads", .Text = "Lookahead Threads"},
                     New NumParam With {.Switch = "--seek", .Text = "Seek"},
@@ -892,8 +900,6 @@ Public Class x264Params
                 Add("Input/Output 3",
                     New BoolParam With {.Switch = "--fake-interlaced", .Text = "Fake Interlaced"},
                     New BoolParam With {.Switch = "--stitchable", .Text = "Stitchable"},
-                    New BoolParam With {.Switch = "--psnr", .Text = "PSNR"},
-                    New BoolParam With {.Switch = "--ssim", .Text = "SSIM"},
                     New BoolParam With {.Switch = "--sliced-threads", .Text = "Low-latency but lower-efficiency threading"},
                     New BoolParam With {.Switch = "--thread-input", .Text = "Run Avisynth in its own thread"},
                     New BoolParam With {.Switch = "--non-deterministic", .Text = "Non Deterministic"},
@@ -905,7 +911,8 @@ Public Class x264Params
                     New BoolParam With {.Switch = "--aud", .Text = "Use access unit delimiters"},
                     New BoolParam With {.Switch = "--quiet", .Text = "Quiet Mode"},
                     New BoolParam With {.Switch = "--verbose", .Switches = {"-v"}, .Text = "Print stats for each frame"},
-                    New BoolParam With {.Switch = "--dts-compress", .Text = "Eliminate initial delay with container DTS hack"})
+                    New BoolParam With {.Switch = "--dts-compress", .Text = "Eliminate initial delay with container DTS hack"},
+                    New BoolParam With {.Switch = "--progress-header", .NoSwitch = "--no-progress-header", .Text = "Show progress header", .Init = True})
                 Add("Other",
                     New StringParam With {.Switch = "--video-filter", .Switches = {"--vf"}, .Text = "Video Filter"},
                     New OptionParam With {.Switches = {"--tff", "--bff"}, .Text = "Interlaced", .Options = {"Progressive ", "Top Field First", "Bottom Field First"}, .Values = {"", "--tff", "--bff"}},
@@ -990,7 +997,7 @@ Public Class x264Params
 
         ApplyValues(True)
 
-        Dim args As String
+        Dim sb As New StringBuilder
         Dim pipeTool = If(p.Script.IsAviSynth, PipingToolAVS, PipingToolVS).ValueText
 
         If includePaths AndAlso includeExecutable Then
@@ -1012,7 +1019,7 @@ Public Class x264Params
                 Case "avs2pipemod y4m"
                     Dim dll As String
 
-                    If FrameServerHelp.IsAviSynthPortableUsed Then
+                    If FrameServerHelp.IsPortable Then
                         dll = " -dll=" + Package.AviSynth.Path.Escape
                     End If
 
@@ -1020,7 +1027,7 @@ Public Class x264Params
                 Case "avs2pipemod raw"
                     Dim dll As String
 
-                    If FrameServerHelp.IsAviSynthPortableUsed Then
+                    If FrameServerHelp.IsPortable Then
                         dll = " -dll=" + Package.AviSynth.Path.Escape
                     End If
 
@@ -1031,37 +1038,37 @@ Public Class x264Params
                     pipeCmd = Package.ffmpeg.Path.Escape + If(p.Script.IsVapourSynth, " -f vapoursynth", "") + " -i " + script.Path.Escape + " -f rawvideo -strict -1 -loglevel fatal -hide_banner - | "
             End Select
 
-            args += pipeCmd + Package.x264.Path.Escape
+            sb.Append(pipeCmd + Package.x264.Path.Escape)
         End If
 
         If Mode.Value = x264RateMode.TwoPass OrElse Mode.Value = x264RateMode.ThreePass Then
-            args += " --pass " & pass
+            sb.Append(" --pass " & pass)
 
             If pass = 1 Then
                 If CustomFirstPass.Value <> "" Then
-                    args += " " + CustomFirstPass.Value
+                    sb.Append(" " + CustomFirstPass.Value)
                 End If
             Else
                 If CustomSecondPass.Value <> "" Then
-                    args += " " + CustomSecondPass.Value
+                    sb.Append(" " + CustomSecondPass.Value)
                 End If
             End If
         End If
 
         If Mode.Value = x264RateMode.Quantizer Then
             If Not IsCustom(pass, "--qp") Then
-                args += " --qp " + CInt(Quant.Value).ToString
+                sb.Append(" --qp " + CInt(Quant.Value).ToString)
             End If
         ElseIf Mode.Value = x264RateMode.Quality Then
             If Not IsCustom(pass, "--crf") Then
-                args += " --crf " + Quant.Value.ToInvariantString
+                sb.Append(" --crf " + Quant.Value.ToInvariantString)
             End If
         Else
             If Not IsCustom(pass, "--bitrate") Then
                 If Bitrate.Value <> 0 Then
-                    args += " --bitrate " & Bitrate.Value
+                    sb.Append(" --bitrate " & Bitrate.Value)
                 Else
-                    args += " --bitrate " & p.VideoBitrate
+                    sb.Append(" --bitrate " & p.VideoBitrate)
                 End If
             End If
         End If
@@ -1069,16 +1076,18 @@ Public Class x264Params
         Dim q = From i In Items Where i.GetArgs <> "" AndAlso Not IsCustom(pass, i.Switch)
 
         If q.Count > 0 Then
-            args += " " + q.Select(Function(item) item.GetArgs).Join(" ")
-        End If
-
-        If args.Contains("%") Then
-            args = Macro.Expand(args)
+            sb.Append(" " + q.Select(Function(item) item.GetArgs).Join(" "))
         End If
 
         If includePaths Then
             Dim input = If(pipeTool = "none", script.Path.Escape, "-")
             Dim dmx = Demuxer.ValueText
+
+            If pipeTool = "none" AndAlso FrameServerHelp.IsPortable AndAlso
+                Package.x264.Version.Contains("aMod") Then
+
+                sb.Append(" --synth-lib " + FrameServerHelp.GetSynthPath.Escape)
+            End If
 
             If dmx = "automatic" Then
                 If pipeTool = "none" Then
@@ -1092,31 +1101,31 @@ Public Class x264Params
 
             If dmx <> "" Then
                 Dim info = script.GetInfo
-                args += $" --demuxer {dmx} --frames " & info.FrameCount
+                sb.Append($" --demuxer {dmx} --frames " & info.FrameCount)
 
                 If dmx = "raw" Then
-                    args += $" --input-res {info.Width}x{info.Height}"
+                    sb.Append($" --input-res {info.Width}x{info.Height}")
 
-                    If Not args.Contains("--fps ") Then
-                        args += $" --fps {info.FrameRateNum}/{info.FrameRateDen}"
+                    If Not sb.ToString.Contains("--fps ") Then
+                        sb.Append($" --fps {info.FrameRateNum}/{info.FrameRateDen}")
                     End If
                 End If
             End If
 
             If Mode.Value = x264RateMode.TwoPass OrElse Mode.Value = x264RateMode.ThreePass Then
-                args += " --stats " + (p.TempDir + p.TargetFile.Base + ".stats").Escape
+                sb.Append(" --stats " + (p.TempDir + p.TargetFile.Base + ".stats").Escape)
             End If
 
             If (Mode.Value = x264RateMode.ThreePass AndAlso (pass = 1 OrElse pass = 3)) OrElse
                 Mode.Value = x264RateMode.TwoPass AndAlso pass = 1 Then
 
-                args += " --output NUL " + input
+                sb.Append(" --output NUL " + input)
             Else
-                args += " --output " + targetPath.Escape + " " + input
+                sb.Append(" --output " + targetPath.Escape + " " + input)
             End If
         End If
 
-        Return args.Trim.FixBreak.Replace(BR, " ")
+        Return Macro.Expand(sb.ToString.Trim.FixBreak.Replace(BR, " "))
     End Function
 
     Function GetPartitionsArg() As String

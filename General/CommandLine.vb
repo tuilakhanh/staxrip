@@ -84,6 +84,8 @@ Namespace CommandLine
                 Exit Sub
             End If
 
+            FrameServerHelp.AviSynthToolPath()
+
             Dim cl = GetCommandLine(True, True)
 
             If TextEncoding.AvsEncoderSupportsUTF8(cl) Then
@@ -119,6 +121,7 @@ Namespace CommandLine
         Property Text As String
         Property URLs As List(Of String)
         Property VisibleFunc As Func(Of Boolean)
+        Property Weight As Integer
 
         Friend Store As PrimitiveStore
         Friend Params As CommandLineParams

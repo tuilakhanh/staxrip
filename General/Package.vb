@@ -7,11 +7,13 @@ Imports Microsoft.Win32
 Public Class Package
     Implements IComparable(Of Package)
 
+    Property AllowCustomPath As Boolean = True
     Property Description As String
     Property DownloadURL As String
     Property DownloadURLs As StringPair()
     Property Exclude As String()
     Property Filename32 As String
+    Property Filter As String
     Property Find As Boolean = True
     Property HelpFilename As String
     Property HelpSwitch As String
@@ -31,7 +33,7 @@ Public Class Package
     Property StatusFunc As Func(Of String)
     Property SupportsAutoUpdate As Boolean = True
     Property TreePath As String
-    Property Version As String
+    Property Version As String = ""
     Property VersionAllowAny As Boolean
     Property VersionAllowNew As Boolean
     Property VersionAllowOld As Boolean = True
@@ -39,7 +41,6 @@ Public Class Package
     Property WebURL As String
 
     Shared Property Items As New SortedDictionary(Of String, Package)
-    Shared Property WasConfLoaded As Boolean
 
     Shared Property DGIndex As Package = Add(New Package With {
         .Name = "DGIndex",
@@ -102,8 +103,9 @@ Public Class Package
     Shared Property ffmpeg As Package = Add(New Package With {
         .Name = "ffmpeg",
         .Filename = "ffmpeg.exe",
-        .Location = "Encoders\ffmpeg",
+        .Locations = {"Encoders\ffmpeg", "FrameServer\AviSynth"},
         .Keep = {"AviSynth.dll"},
+        .AllowCustomPath = False,
         .WebURL = "http://ffmpeg.org",
         .HelpURL = "http://www.ffmpeg.org/documentation.html",
         .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
@@ -216,6 +218,7 @@ Public Class Package
         .Name = "AviSynth",
         .Filename = "AviSynth.dll",
         .VersionAllowOld = False,
+        .AllowCustomPath = False,
         .WebURL = "https://github.com/AviSynth/AviSynthPlus",
         .HelpURL = "http://avisynth.nl",
         .DownloadURL = "https://github.com/AviSynth/AviSynthPlus/releases",
@@ -291,10 +294,19 @@ Public Class Package
         .IsIncluded = False,
         .HelpSwitch = "-h"})
 
+    Shared Property VisualCpp2010 As Package = Add(New Package With {
+        .Name = "Visual C++ 2010",
+        .Filename = "msvcp100.dll",
+        .Description = "Visual C++ 2010 Redistributable.",
+        .DownloadURL = "https://www.microsoft.com/en-us/download/details.aspx?id=14632",
+        .Locations = {Folder.System, "Support\VC"},
+        .VersionAllowAny = True,
+        .TreePath = "Runtimes"})
+
     Shared Property VisualCpp2012 As Package = Add(New Package With {
         .Name = "Visual C++ 2012",
         .Filename = "msvcp110.dll",
-        .Description = "Visual C++ 2012 Redistributable is required by some tools used by StaxRip.",
+        .Description = "Visual C++ 2012 Redistributable.",
         .DownloadURL = "http://www.microsoft.com/en-US/download/details.aspx?id=30679",
         .Locations = {Folder.System, "Support\VC"},
         .VersionAllowAny = True,
@@ -303,19 +315,18 @@ Public Class Package
     Shared Property VisualCpp2013 As Package = Add(New Package With {
         .Name = "Visual C++ 2013",
         .Filename = "msvcp120.dll",
-        .Description = "Visual C++ 2013 Redistributable is required by some tools used by StaxRip.",
+        .Description = "Visual C++ 2013 Redistributable.",
         .DownloadURL = "http://www.microsoft.com/en-US/download/details.aspx?id=40784",
         .VersionAllowAny = True,
         .Locations = {Folder.System, "Support\VC"},
         .TreePath = "Runtimes"})
 
     Shared Property VisualCpp2019 As Package = Add(New Package With {
-        .Name = "Visual C++ 2019",
+        .Name = "Visual C++ 2015-2019",
         .Filename = "msvcp140.dll",
-        .Description = "Visual C++ Redistributable is required by many tools used by StaxRip.",
+        .Description = "Visual C++ 2015-2019 Redistributable.",
         .DownloadURL = "https://support.microsoft.com/en-gb/help/2977003/the-latest-supported-visual-c-downloads",
-        .VersionAllowOld = False,
-        .VersionAllowNew = True,
+        .VersionAllowAny = True,
         .Locations = {Folder.System, "Support\VC"},
         .TreePath = "Runtimes"})
 
@@ -378,27 +389,17 @@ Public Class Package
         .DownloadURL = "https://github.com/stax76/mpv.net#download",
         .Description = "The worlds best media player (GUI app)."})
 
-    Shared Property MpcBE As Package = Add(New Package With {
-        .Name = "MPC-BE",
+    Shared Property MPC As Package = Add(New Package With {
+        .Name = "MPC",
         .Filename = "mpc-be64.exe",
         .Filename32 = "mpc-be.exe",
+        .Filter = "|mpc-hc64.exe;mpc-be64.exe|All Files|*.*",
         .IsIncluded = False,
         .VersionAllowAny = True,
         .Required = False,
         .WebURL = "https://sourceforge.net/projects/mpcbe",
         .Description = "DirectShow based media player (GUI app).",
         .Locations = {Registry.LocalMachine.GetString("SOFTWARE\MPC-BE", "ExePath").Dir, Folder.Programs + "MPC-BE x64"}})
-
-    Shared Property MpcHC As Package = Add(New Package With {
-        .Name = "MPC-HC",
-        .Filename = "mpc-hc64.exe",
-        .Filename32 = "mpc-hc.exe",
-        .IsIncluded = False,
-        .VersionAllowAny = True,
-        .Required = False,
-        .WebURL = "https://mpc-hc.org",
-        .Description = "DirectShow based media player (GUI app).",
-        .Locations = {Registry.CurrentUser.GetString("Software\MPC-HC\MPC-HC", "ExePath").Dir, Folder.Programs + "MPC-HC"}})
 
     Shared Property modPlus As Package = Add(New PluginPackage With {
         .Name = "modPlus",
@@ -515,20 +516,22 @@ Public Class Package
     Shared Property x264 As Package = Add(New Package With {
         .Name = "x264",
         .Filename = "x264.exe",
-        .Location = "Encoders\x264",
-        .Description = "H.264 video encoding console app. Patman mod supports vpy input and shows the estimated size in the status line.",
+        .Locations = {"Encoders\x264", "FrameServer\AviSynth"},
+        .Description = "H.264 video encoding console app.",
         .Keep = {"AviSynth.dll"},
-        .WebURL = "http://www.videolan.org/developers/x264.html",
-        .DownloadURL = "https://www.mediafire.com/folder/vkt2ckzjvt0qf/StaxRip_Tools",
+        .AllowCustomPath = False,
+        .WebURL = "https://github.com/DJATOM/x264-aMod",
+        .DownloadURL = "https://github.com/DJATOM/x264-aMod/releases",
         .HelpURL = "http://www.chaneru.com/Roku/HLS/X264_Settings.htm",
         .HelpSwitch = "--fullhelp"})
 
     Shared Property x265 As Package = Add(New Package With {
         .Name = "x265",
-        .Location = "Encoders\x265",
+        .Locations = {"Encoders\x265", "FrameServer\AviSynth"},
         .Filename = "x265.exe",
         .WebURL = "https://x265.com",
         .HelpURL = "http://x265.readthedocs.org",
+        .AllowCustomPath = False,
         .Keep = {"AviSynth.dll"},
         .HelpSwitch = "--log-level full --fullhelp",
         .Description = "H.265 video encoding console app.",
@@ -676,10 +679,10 @@ Public Class Package
         .HelpURL = "http://github.com/FFMS/ffms2/blob/master/doc/ffms2-avisynth.md",
         .Description = "AviSynth+ and VapourSynth source filter supporting various input formats.",
         .AvsFilterNames = {"FFVideoSource", "FFAudioSource", "FFMS2"},
-        .AvsFiltersFunc = Function() {New VideoFilter("Source", "FFVideoSource", $"FFVideoSource(""%source_file%"", cachefile=""%source_temp_file%.ffindex"")" + BR + "#AssumeFPS(25)"),
-                                      New VideoFilter("Source", "FFMS2", $"FFMS2(""%source_file%"", atrack=-1, cachefile=""%source_temp_file%.ffindex"")" + BR + "#AssumeFPS(25)")},
+        .AvsFiltersFunc = Function() {New VideoFilter("Source", "FFVideoSource", $"FFVideoSource(""%source_file%"", cachefile=""%source_temp_file%.ffindex"")"),
+                                      New VideoFilter("Source", "FFMS2", $"FFMS2(""%source_file%"", atrack=-1, cachefile=""%source_temp_file%.ffindex"")")},
         .VSFilterNames = {"ffms2"},
-        .VSFiltersFunc = Function() {New VideoFilter("Source", "ffms2", "clip = core.ffms2.Source(r""%source_file%"", cachefile=r""%source_temp_file%.ffindex"")" + BR + "#clip = core.std.AssumeFPS(clip, None, 25, 1)")}})
+        .VSFiltersFunc = Function() {New VideoFilter("Source", "ffms2", "clip = core.ffms2.Source(r""%source_file%"", cachefile=r""%source_temp_file%.ffindex"")")}})
 
     Shared Property AviSynthShader As Package = Add(New PluginPackage With {
         .Name = "AviSynthShader DLL",
@@ -764,7 +767,7 @@ Public Class Package
         .AvsFilterNames = {"QTGMC"},
         .AvsFiltersFunc = Function() {
             New VideoFilter("Field", "QTGMC | QTGMC...", "QTGMC(preset=""$select:msg:Select a preset.;Draft;Ultra Fast;Super Fast;Very Fast;Faster;Fast;Medium;Slow;Slower;Very Slow;Placebo$"", InputType=$select:msg:Select Input Type;Interlaced|0;Progressive|1;Progressive Repair Details|2;Progressive Full Repair|3$, sourceMatch=3, sharpness=0.2, tr2=2, ediThreads=8)"),
-            New VideoFilter("Field", "QTGMC | QTGMC With Repair", "QTGMC1 = QTGMC(preset=""Slower"", inputType=2)" + BR + "QTGMC2 = QTGMC(preset=""Slower"", inputType=3, prevGlobals=""Reuse"")" + BR + "$select:msg:Select Repair Mode To Use;Repair|Repair(QTGMC1, QTGMC2, 1);Repair16|Repair16(QTGMC1, QTGMC2, 1)$")}})
+            New VideoFilter("Field", "QTGMC | QTGMC With Repair", "QTGMC1 = QTGMC(preset=""Slower"", inputType=2)" + BR + "QTGMC2 = QTGMC(preset=""Slower"", inputType=3, prevGlobals=""Reuse"")" + BR + "$select:msg:Select Repair Mode To Use;Repair|Repair(QTGMC1, QTGMC2, 1);Repair16|Dither_Repair16(QTGMC1, QTGMC2, 1)$")}})
 
     Shared Property SMDegrain As Package = Add(New PluginPackage With {
         .Name = "SMDegrain",
@@ -815,12 +818,12 @@ Public Class Package
         .HelpUrlVapourSynth = "https://github.com/HolyWu/L-SMASH-Works/blob/master/VapourSynth/README",
         .AvsFilterNames = {"LSMASHVideoSource", "LSMASHAudioSource", "LWLibavVideoSource", "LWLibavAudioSource"},
         .AvsFiltersFunc = Function() {
-            New VideoFilter("Source", "LSMASHVideoSource", "LSMASHVideoSource(""%source_file%"")" + BR + "#AssumeFPS(25)"),
-            New VideoFilter("Source", "LWLibavVideoSource", "LWLibavVideoSource(""%source_file%"", cachefile=""%source_temp_file%.lwi"")" + BR + "#AssumeFPS(25)")},
+            New VideoFilter("Source", "LSMASHVideoSource", "LSMASHVideoSource(""%source_file%"")"),
+            New VideoFilter("Source", "LWLibavVideoSource", "LWLibavVideoSource(""%source_file%"", cachefile=""%source_temp_file%.lwi"")")},
         .VSFilterNames = {"lsmas.LibavSMASHSource", "lsmas.LWLibavSource"},
         .VSFiltersFunc = Function() {
-            New VideoFilter("Source", "LibavSMASHSource", "clip = core.lsmas.LibavSMASHSource(r""%source_file%"")" + BR + "#clip = core.std.AssumeFPS(clip, None, 25, 1)"),
-            New VideoFilter("Source", "LWLibavSource", "clip = core.lsmas.LWLibavSource(r""%source_file%"", cachefile=r""%source_temp_file%.lwi"")" + BR + "#clip = core.std.AssumeFPS(clip, None, 25, 1)")}})
+            New VideoFilter("Source", "LibavSMASHSource", "clip = core.lsmas.LibavSMASHSource(r""%source_file%"")"),
+            New VideoFilter("Source", "LWLibavSource", "clip = core.lsmas.LWLibavSource(r""%source_file%"", cachefile=r""%source_temp_file%.lwi"")")}})
 
     Shared Property BM3D As Package = Add(New PluginPackage With {
         .Name = "BM3D",
@@ -888,6 +891,8 @@ Public Class Package
         .Name = "FFT3DGPU",
         .Filename = "FFT3dGPU.dll",
         .Description = "Similar algorithm to FFT3DFilter, but uses graphics hardware for increased speed.",
+        .WebURL = "https://github.com/pinterf/FFT3dGPU",
+        .DownloadURL = "https://github.com/pinterf/FFT3dGPU/releases",
         .HelpURL = "https://htmlpreview.github.io/?https://github.com/pinterf/FFT3dGPU/blob/master/FFT3dGPU/documentation/fft3dgpu.htm",
         .AvsFilterNames = {"FFT3DGPU"},
         .AvsFiltersFunc = Function() {New VideoFilter("Noise", "FFT3DFilter | FFT3DGPU", "FFT3DGPU(sigma=1.5, bt=3, bw=32, bh=32, ow=16, oh=16, sharpen=0.4, NVPerf=$select:msg:Enable Nvidia Function;True;False$)")}})
@@ -1028,7 +1033,7 @@ Public Class Package
             .Location = "Plugins\AVS\InterFrame2",
             .WebURL = "http://avisynth.nl/index.php/InterFrame",
             .AvsFilterNames = {"InterFrame"},
-            .AvsFiltersFunc = Function() {New VideoFilter("FrameRate", "InterFrame", "InterFrame(preset=""Medium"", tuning=""$select:msg:Select the Tuning Preset;Animation;Film;Smooth;Weak$"", newNum=$enter_text:Enter the NewNum Value.$, newDen=$enter_text:Enter the NewDen Value$, cores=$enter_text:Enter the Number of Cores You want to use$, overrideAlgo=$select:msg:Which Algorithm Do you want to Use?;Strong Predictions|2;Intelligent|13;Smoothest|23$, GPU=$select:msg:Enable GPU Feature?;True;False$)")}})
+            .AvsFiltersFunc = Function() {New VideoFilter("Frame Rate", "InterFrame", "InterFrame(preset=""Medium"", tuning=""$select:msg:Select the Tuning Preset;Animation;Film;Smooth;Weak$"", newNum=$enter_text:Enter the NewNum Value.$, newDen=$enter_text:Enter the NewDen Value$, cores=$enter_text:Enter the Number of Cores You want to use$, overrideAlgo=$select:msg:Which Algorithm Do you want to Use?;Strong Predictions|2;Intelligent|13;Smoothest|23$, GPU=$select:msg:Enable GPU Feature?;True;False$)")}})
 
         Add(New PluginPackage With {
             .Name = "SVPFlow 1",
@@ -1108,7 +1113,7 @@ Public Class Package
             .Name = "AvsResize",
             .Filename = "avsresize.dll",
             .HelpFilename = "README.md",
-            .WebURL = "http://forum.doom9.org/showthread.php?t=173986",
+            .WebURL = "http://avisynth.nl/index.php/Avsresize",
             .AvsFilterNames = {"z_ConvertFormat", "z_PointResize", "z_BilinearResize", "z_BicubicResize", "z_LanczosResize", "z_Lanczos4Resize", "z_Spline16Resize", "z_Spline36Resize", "z_Spline64Resize"},
             .AvsFiltersFunc = Function() {New VideoFilter("Color", "Convert | Format", "z_ConvertFormat(pixel_type=""$enter_text:Enter the Format You Wish to Convert to$"", colorspace_op=""$select:msg:Select Input Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Input Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Input Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$=>$select:msg:Select Output Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Output Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Output Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$"", dither_type=""$select:msg:Select Dither Type;none;ordered;random;error_diffusion$"")")}})
 
@@ -1353,7 +1358,7 @@ Public Class Package
             .WebURL = "http://avisynth.nl/index.php/YFRC",
             .Description = "Yushko Frame Rate convertor - doubles the frame rate with strong artifact detection and scene change detection. YFRC uses masks to reduce artifacts in areas where interpolation failed.",
             .AvsFilterNames = {"YFRC"},
-            .AvsFiltersFunc = Function() {New VideoFilter("FrameRate", "YRFC", "YFRC(BlockH=16, BlockV=16, OverlayType=0, MaskExpand=1)")}})
+            .AvsFiltersFunc = Function() {New VideoFilter("Frame Rate", "YRFC", "YFRC(BlockH=16, BlockV=16, OverlayType=0, MaskExpand=1)")}})
 
         Add(New PluginPackage With {
             .Name = "Deblock",
@@ -2019,8 +2024,6 @@ Public Class Package
                   End Sub)
     End Sub
 
-    Shared Property ConfLock As New Object
-
     Shared Function Add(pack As Package) As Package
         Items(pack.ID) = pack
         Return pack
@@ -2034,7 +2037,7 @@ Public Class Package
                 If Not plugin.AvsFilterNames.NothingOrEmpty AndAlso
                     Not plugin.VSFilterNames.NothingOrEmpty Then
 
-                    Return Name + " avs+vs"
+                    Return Name + " dual"
                 ElseIf Not plugin.AvsFilterNames.NothingOrEmpty Then
                     Return Name + " avs"
                 ElseIf Not plugin.VSFilterNames.NothingOrEmpty Then
@@ -2050,7 +2053,7 @@ Public Class Package
 
     Property Filename As String
         Get
-            If g.Is32Bit AndAlso Filename32 <> "" Then
+            If Not Environment.Is64BitProcess AndAlso Filename32 <> "" Then
                 Return Filename32
             End If
 
@@ -2379,8 +2382,39 @@ Public Class Package
     End Function
 
     Function IsCustomPathAllowed() As Boolean
-        Return Not Path.PathStartsWith(Folder.System)
+        Return Not Path.PathStartsWith(Folder.System) AndAlso AllowCustomPath
     End Function
+
+    Shared x265FileSize As Long
+    Shared x265TypeValue As x265Type
+
+    Shared ReadOnly Property x265Type As x265Type
+        Get
+            Dim filePath = x265.Path
+
+            If filePath <> "" Then
+                Dim size = New FileInfo(filePath).Length
+
+                If size <> x265FileSize Then
+                    Dim output = ProcessHelp.GetConsoleOutput(filePath, "--version", True)
+
+                    If output.Contains("DJATOM") Then
+                        x265TypeValue = x265Type.DJATOM
+                    ElseIf output.Contains("Asuna") Then
+                        x265TypeValue = x265Type.Asuna
+                    ElseIf output.Contains("Patman") Then
+                        x265TypeValue = x265Type.Patman
+                    Else
+                        x265TypeValue = x265Type.Vanilla
+                    End If
+
+                    x265FileSize = size
+                End If
+
+                Return x265TypeValue
+            End If
+        End Get
+    End Property
 
     ReadOnly Property Directory As String
         Get
@@ -2435,7 +2469,7 @@ Public Class Package
     End Function
 
     Shared Function GetPythonHintDir() As String
-        If Not FrameServerHelp.IsVapourSynthPortableUsed Then
+        If Not FrameServerHelp.IsVapourSynthPortable Then
             Dim exePath As String
 
             For Each key In {Registry.CurrentUser, Registry.LocalMachine}
@@ -2660,6 +2694,9 @@ Public Class Package
         Return Name.CompareTo(other.Name)
     End Function
 
+    Shared Property ConfLock As New Object
+    Shared Property WasConfLoaded As Boolean
+
     ReadOnly Property ConfPath As String
         Get
             Return Folder.Apps + "Conf\" + ID + ".conf"
@@ -2674,8 +2711,12 @@ Public Class Package
         If Not WasConfLoaded Then
             WasConfLoaded = True
 
-            For Each pack In Items.Values
-                pack.LoadConf()
+            For Each i In IO.Directory.GetFiles(Folder.Apps + "Conf")
+                If Items.ContainsKey(i.Base) Then
+                    Items(i.Base).LoadConf()
+                Else
+                    FileHelp.Delete(i)
+                End If
             Next
         End If
     End Sub
@@ -2760,10 +2801,12 @@ Public Class PluginPackage
         ElseIf p.Script.Engine = ScriptEngine.VapourSynth AndAlso
             Not package.VSFilterNames.NothingOrEmpty Then
 
-            For Each filter In p.Script.Filters
-                If filter.Active Then
+            For Each ifilter In p.Script.Filters
+                If ifilter.Active Then
                     For Each filterName In package.VSFilterNames
-                        If filter.Script.Contains(filterName) Then Return True
+                        If ifilter.Script.Contains(filterName) Then
+                            Return True
+                        End If
                     Next
                 End If
             Next

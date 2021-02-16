@@ -380,7 +380,8 @@ clipname.set_output()
         If Not script.Contains("import vapoursynth") Then
             code =
                 "import os, sys" + BR +
-                "import vapoursynth as vs" + BR + "core = vs.get_core()" + BR +
+                "import vapoursynth as vs" + BR +
+                "core = vs.get_core()" + BR +
                 GetVsPortableAutoLoadPluginCode() + BR +
                 "sys.path.append(r""" + Folder.Startup + "Apps\Plugins\VS\Scripts"")" + BR + code
         End If
@@ -668,7 +669,7 @@ clipname.set_output()
         script.Filters.Add(New VideoFilter("Crop", "Crop", "clip = core.std.Crop(clip, %crop_left%, %crop_right%, %crop_top%, %crop_bottom%)", False))
         script.Filters.Add(New VideoFilter("Noise", "DFTTest", "clip = core.dfttest.DFTTest(clip, sigma=6, tbsize=3, opt=3)", False))
         script.Filters.Add(New VideoFilter("Field", "QTGMC Medium", $"clip = core.std.SetFieldBased(clip, 2) # 1=BFF, 2=TFF{BR}clip = havsfunc.QTGMC(clip, TFF=True, Preset='Medium')", False))
-        'script.Filters.Add(New VideoFilter("FrameRate", "SVPFlow", "crop_string = """"" + BR + "resize_string = """"" + BR + "super_params = ""{pel:1,scale:{up:0},gpu:1,full:false,rc:true}""" + BR + "analyse_params = ""{block:{w:16},main:{search:{coarse:{type:4,distance:-6,bad:{sad:2000,range:24}},type:4}},refine:[{thsad:250}]}""" + BR + "smoothfps_params = ""{gpuid:11,linear:true,rate:{num:60000,den:1001,abs:true},algo:23,mask:{area:200},scene:{}}""" + BR + "def interpolate(clip):" + BR + "    input = clip" + BR + "    if crop_string!='':" + BR + "        input = eval(crop_string)" + BR + "    if resize_string!='':" + BR + "        input = eval(resize_string)" + BR + "    super   = core.svp1.Super(input,super_params)" + BR + "    vectors = core.svp1.Analyse(super[""clip""],super[""data""],input,analyse_params)" + BR + "    smooth  = core.svp2.SmoothFps(input,super[""clip""],super[""data""],vectors[""clip""],vectors[""data""],smoothfps_params,src=clip)" + BR + "    smooth  = core.std.AssumeFPS(smooth,fpsnum=smooth.fps_num,fpsden=smooth.fps_den)" + BR + "    return smooth" + BR + "clip =  interpolate(clip)", False))
+        'script.Filters.Add(New VideoFilter("Frame Rate", "SVPFlow", "crop_string = """"" + BR + "resize_string = """"" + BR + "super_params = ""{pel:1,scale:{up:0},gpu:1,full:false,rc:true}""" + BR + "analyse_params = ""{block:{w:16},main:{search:{coarse:{type:4,distance:-6,bad:{sad:2000,range:24}},type:4}},refine:[{thsad:250}]}""" + BR + "smoothfps_params = ""{gpuid:11,linear:true,rate:{num:60000,den:1001,abs:true},algo:23,mask:{area:200},scene:{}}""" + BR + "def interpolate(clip):" + BR + "    input = clip" + BR + "    if crop_string!='':" + BR + "        input = eval(crop_string)" + BR + "    if resize_string!='':" + BR + "        input = eval(resize_string)" + BR + "    super   = core.svp1.Super(input,super_params)" + BR + "    vectors = core.svp1.Analyse(super[""clip""],super[""data""],input,analyse_params)" + BR + "    smooth  = core.svp2.SmoothFps(input,super[""clip""],super[""data""],vectors[""clip""],vectors[""data""],smoothfps_params,src=clip)" + BR + "    smooth  = core.std.AssumeFPS(smooth,fpsnum=smooth.fps_num,fpsden=smooth.fps_den)" + BR + "    return smooth" + BR + "clip =  interpolate(clip)", False))
         'script.Filters.Add(New VideoFilter("Color", "Respec", "clip = core.fmtc.resample(clip, css='444')" + BR + "clip = core.fmtc.matrix(clip, mats='709', matd='709')" + BR + "clip = core.fmtc.resample(clip, css='420')" + BR + "clip = core.fmtc.bitdepth(clip, bits=10, fulls=False, fulld=False)", False))
         script.Filters.Add(New VideoFilter("Resize", "BicubicResize", "clip = core.resize.Bicubic(clip, %target_width%, %target_height%)", False))
         ret.Add(script)
@@ -677,11 +678,11 @@ clipname.set_output()
     End Function
 
     Overrides Function Edit() As DialogResult
-        Using f As New CodeEditor(Me)
-            f.StartPosition = FormStartPosition.CenterParent
+        Using form As New CodeEditor(Me)
+            form.StartPosition = FormStartPosition.CenterParent
 
-            If f.ShowDialog() = DialogResult.OK Then
-                Filters = f.GetFilters
+            If form.ShowDialog() = DialogResult.OK Then
+                Filters = form.GetFilters
 
                 If Filters.Count = 0 OrElse Filters(0).Category <> "Source" Then
                     MsgError("The first filter must be a source filter.")
@@ -743,7 +744,10 @@ Public Class SourceVideoScript
     End Property
 
     Overrides Function GetScript() As String
-        Return p.Script.Filters(0).Script
+        Dim rotationFilter = p.Script.Filters.Where(Function(x) x.Active = True AndAlso x.Category = "Rotation")?.FirstOrDefault()
+        Dim ret = p.Script.Filters(0).Script
+        ret += If(rotationFilter Is Nothing, "", BR + rotationFilter.Script)
+        Return ret
     End Function
 End Class
 
@@ -797,8 +801,13 @@ Public Class VideoFilter
         Return Path.CompareTo(other.Path)
     End Function
 
-    Shared Function GetDefault(category As String, name As String) As VideoFilter
-        Return FilterCategory.GetAviSynthDefaults.First(Function(val) val.Name = category).Filters.First(Function(val) val.Name = name)
+    Shared Function GetDefault(
+        category As String, name As String,
+        Optional scriptEngine As ScriptEngine = ScriptEngine.AviSynth) As VideoFilter
+
+        Dim defaults = If(scriptEngine = ScriptEngine.AviSynth,
+            FilterCategory.GetAviSynthDefaults(), FilterCategory.GetVapourSynthDefaults())
+        Return defaults.Where(Function(i) i.Name = category).FirstOrDefault()?.Filters.Where(Function(i) i.Name = name).FirstOrDefault()
     End Function
 End Class
 
@@ -840,9 +849,13 @@ Public Class FilterCategory
             Dim filters As VideoFilter() = Nothing
 
             If engine = ScriptEngine.AviSynth Then
-                If Not i.AvsFiltersFunc Is Nothing Then filters = i.AvsFiltersFunc.Invoke
+                If Not i.AvsFiltersFunc Is Nothing Then
+                    filters = i.AvsFiltersFunc.Invoke
+                End If
             Else
-                If Not i.VSFiltersFunc Is Nothing Then filters = i.VSFiltersFunc.Invoke
+                If Not i.VSFiltersFunc Is Nothing Then
+                    filters = i.VSFiltersFunc.Invoke
+                End If
             End If
 
             If Not filters Is Nothing Then
@@ -872,13 +885,6 @@ Public Class FilterCategory
              New VideoFilter("Source", "DirectShowSource", "DirectShowSource(""%source_file%"", audio=false)")})
         ret.Add(src)
 
-        Dim framerate As New FilterCategory("FrameRate")
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS", "AssumeFPS($select:msg:Select a frame rate;24000/1001|24000, 1001;24;25;30000/1001|30000, 1001;30;50;60000/1001|60000, 1001;60;120;144;240$)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS Source File", "AssumeFPS(%media_info_video:FrameRate%)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "ConvertFPS", "ConvertFPS($select:msg:Select a frame rate;24;25;29.970;30;50;59.940;60;120;144;240;$)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow", "Threads = 8" + BR + "super_params = ""{pel:2,gpu:1}""" + BR + "analyse_params = """"""{block:{w:16,h:16}, main:{search:{coarse:{distance:-10}}}, refine:[{thsad:200}]}"""""" " + BR + "smoothfps_params = ""{rate:{num:4,den:2},algo:23,cubic:1}""" + BR + "super = SVSuper(super_params)" + BR + "vectors = SVAnalyse(super, analyse_params)" + BR + "SVSmoothFps(super, vectors, smoothfps_params, mt=threads)" + BR + "#Prefetch(threads) must be added at the end of the script and Threads=9 after the source" + BR + "Prefetch(threads)"))
-        ret.Add(framerate)
-
         Dim color As New FilterCategory("Color")
         color.Filters.Add(New VideoFilter(color.Name, "ColorYUV | AutoAdjust", "AutoAdjust(gamma_limit=1.0, scd_threshold=16, gain_mode=1, auto_gain=$select:msg:Enable Auto Gain?;true;false$, auto_balance=$select:msg:Enable Auto Balance?;true;false$, Input_tv=$select:msg:Is the Input using TV Range?;true;false$, output_tv=$select:msg:Do you want to use TV Range for Output?;true;false$, use_dither=$select:msg:Use Dither?;true;false$, high_quality=$select:msg:Use High Quality Mode?;true;false$, high_bitdepth=$select:msg:Use High Bit Depth Mode?;true;false$, threads_count=$enter_text:How Many Threads do You Wish to use?$)"))
         color.Filters.Add(New VideoFilter(color.Name, "ColorYUV | Levels", "$select:TV to PC|ColorYUV(levels=""TV->PC"");PC to TV|ColorYUV(levels=""PC->TV"")$"))
@@ -896,10 +902,10 @@ Public Class FilterCategory
         color.Filters.Add(New VideoFilter(color.Name, "ColorYUV | Tweak", "Tweak(realcalc=true, dither_strength=1.0, sat=0.75, startHue=105, endHue=138 )"))
         ret.Add(color)
 
-        Dim line As New FilterCategory("Line")
-        line.Filters.Add(New VideoFilter(line.Name, "Anti-Aliasing | SangNom2", "Sangnom2()"))
-        line.Filters.Add(New VideoFilter(line.Name, "Sharpen | MultiSharpen", "MultiSharpen(1)"))
-        ret.Add(line)
+        Dim crop As New FilterCategory("Crop")
+        crop.Filters.Add(New VideoFilter(crop.Name, "Crop", "$select:msg:Select Version;Crop;Dither_Crop16$(%crop_left%, %crop_top%, -%crop_right%, -%crop_bottom%)"))
+        crop.Filters.Add(New VideoFilter(crop.Name, "Hardware Encoder", "# hardware encoder crops"))
+        ret.Add(crop)
 
         Dim field As New FilterCategory("Field")
         field.Filters.Add(New VideoFilter(field.Name, "IVTC", "Telecide(guide=1)" + BR + "Decimate()"))
@@ -908,9 +914,18 @@ Public Class FilterCategory
         field.Filters.Add(New VideoFilter(field.Name, "Assume", "$select:TFF|AssumeTFF();BFF|AssumeTFF()$"))
         ret.Add(field)
 
-        Dim noise As New FilterCategory("Noise")
-        noise.Filters.Add(New VideoFilter(noise.Name, "RemoveGrain | RemoveGrain | RemoveGrain16 with Repair16", "Processed = Dither_removegrain16(mode=2, modeU=2, modeV=2)" + BR + "Dither_repair16(Processed, mode=2, modeU=2, modeV=2)"))
-        ret.Add(noise)
+        Dim framerate As New FilterCategory("Frame Rate")
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS", "AssumeFPS($select:msg:Select a frame rate;23.976|24000, 1001;24;25;29.970|30000, 1001;30;50;59.940|60000, 1001;60;120;144;240$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS Source File", "AssumeFPS(%media_info_video:FrameRate%)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "ChangeFPS", "ChangeFPS($select:msg:Select a frame rate;23.976|24000, 1001;24;25;29.970|30000, 1001;30;50;59.940|60000, 1001;60;120;144;240$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "ConvertFPS", "ConvertFPS($select:msg:Select a frame rate;23.976|24000, 1001;24;25;29.970|30000, 1001;30;50;59.940|60000, 1001;60;120;144;240$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow", "Threads = 8" + BR + "super_params = ""{pel:2,gpu:1}""" + BR + "analyse_params = """"""{block:{w:16,h:16}, main:{search:{coarse:{distance:-10}}}, refine:[{thsad:200}]}"""""" " + BR + "smoothfps_params = ""{rate:{num:4,den:2},algo:23,cubic:1}""" + BR + "super = SVSuper(super_params)" + BR + "vectors = SVAnalyse(super, analyse_params)" + BR + "SVSmoothFps(super, vectors, smoothfps_params, mt=threads)" + BR + "#Prefetch(threads) must be added at the end of the script and Threads=9 after the source" + BR + "Prefetch(threads)"))
+        ret.Add(framerate)
+
+        Dim line As New FilterCategory("Line")
+        line.Filters.Add(New VideoFilter(line.Name, "Anti-Aliasing | SangNom2", "Sangnom2()"))
+        line.Filters.Add(New VideoFilter(line.Name, "Sharpen | MultiSharpen", "MultiSharpen(1)"))
+        ret.Add(line)
 
         Dim misc As New FilterCategory("Misc")
         misc.Filters.Add(New VideoFilter(misc.Name, "MTMode | Prefetch", "Prefetch($enter_text:Enter the Number of Threads to Use$)")) ' Number or Reference to Thread header can Be Used here.
@@ -921,8 +936,11 @@ Public Class FilterCategory
         misc.Filters.Add(New VideoFilter(misc.Name, "SplitVertical", "Splitvertical=true"))
         misc.Filters.Add(New VideoFilter(misc.Name, "AddBorders", "AddBorders(0,0,0,0) #left,top,right,bottom"))
         misc.Filters.Add(New VideoFilter(misc.Name, "SelectRangeEvery", "SelectRangeEvery(1500,50)"))
-
         ret.Add(misc)
+
+        Dim noise As New FilterCategory("Noise")
+        noise.Filters.Add(New VideoFilter(noise.Name, "RemoveGrain | RemoveGrain | RemoveGrain16 with Repair16", "Processed = Dither_removegrain16(mode=2, modeU=2, modeV=2)" + BR + "Dither_repair16(Processed, mode=2, modeU=2, modeV=2)"))
+        ret.Add(noise)
 
         Dim resize As New FilterCategory("Resize")
         resize.Filters.Add(New VideoFilter(resize.Name, "Resize...", "$select:BicubicResize;BilinearResize;BlackmanResize;GaussResize;Lanczos4Resize;LanczosResize;PointResize;SincResize;Jinc36Resize;Jinc64Resize;Jinc144Resize;Jinc256Resize;Spline16Resize;Spline36Resize;Spline64Resize$(%target_width%, %target_height%)"))
@@ -932,14 +950,15 @@ Public Class FilterCategory
         resize.Filters.Add(New VideoFilter(resize.Name, "Advanced | Dither_Resize16 In Linear Light", "Dither_convert_yuv_to_rgb (matrix=""2020"", output=""rgb48y"", lsb_in=true)" + BR + "Dither_y_gamma_to_linear(tv_range_in=false, tv_range_out=false, curve=""2020"", sigmoid=true)" + BR + "Dither_resize16nr(%target_width%, %target_height%, kernel=""spline36"")" + BR + "Dither_y_linear_to_gamma(tv_range_in=false, tv_range_out=false, curve=""2020"", sigmoid=true)" + BR + "r = SelectEvery (3, 0)" + BR + "g = SelectEvery (3, 1)" + BR + "b = SelectEvery (3, 2)" + BR + "Dither_convert_rgb_to_yuv(r, g, b, matrix=""2020"", lsb=true)"))
         ret.Add(resize)
 
-        Dim crop As New FilterCategory("Crop")
-        crop.Filters.Add(New VideoFilter(crop.Name, "Crop", "$select:msg:Select Version;Crop;Dither_Crop16$(%crop_left%, %crop_top%, -%crop_right%, -%crop_bottom%)"))
-        crop.Filters.Add(New VideoFilter(crop.Name, "Hardware Encoder", "# hardware encoder crops"))
-        ret.Add(crop)
-
         Dim restoration As New FilterCategory("Restoration")
         restoration.Filters.Add(New VideoFilter(restoration.Name, "RCR | ColorBanding", "$select:GradFun3|GradFun3();f3kdb|f3kdb()$"))
         ret.Add(restoration)
+
+        Dim rotation As New FilterCategory("Rotation")
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Left", $"TurnLeft()"))
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Right", $"TurnRight()"))
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Upside Down", $"Turn180()"))
+        ret.Add(rotation)
 
         FilterCategory.AddDefaults(ScriptEngine.AviSynth, ret)
 
@@ -960,14 +979,6 @@ Public Class FilterCategory
              New VideoFilter("Source", "AVISource", "clip = core.avisource.AVISource(r""%source_file%"")")})
         ret.Add(src)
 
-        Dim framerate As New FilterCategory("FrameRate")
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS | AssumeFPS Source", "clip = core.std.AssumeFPS(clip, fpsnum=int(%media_info_video:FrameRate% * 1000), fpsden=1000)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS | AssumeFPS", "clip = core.std.AssumeFPS(clip, None, $select:msg:Select a frame rate.;24000/1001|24000, 1001;24|24, 1;25|25, 1;30000/1001|30000, 1001;30|30, 1;50|50, 1;60000/1001|60000, 1001;60|60, 1$)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "InterFrame", "clip = havsfunc.InterFrame(clip, Preset='Medium', Tuning='$select:msg:Select the Tuning Preset;Animation;Film;Smooth;Weak$', NewNum=$enter_text:Enter the NewNum Value$, NewDen=$enter_text:Enter the NewDen Value$, OverrideAlgo=$select:msg:Which Algorithm Do you Wish to Use?;Strong Predictions|2;Intelligent|13;Smoothest|23$, GPU=$select:msg:Enable GPU Feature?;True;False$)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow | MV", "sup = core.mv.Super(clip, pel=2, hpad=0, vpad=0)" + BR + "bvec = core.mv.Analyse(sup, blksize=16, isb=True, chroma=True, search=3, searchparam=1)" + BR + "fvec = core.mv.Analyse(sup, blksize=16, isb=False, chroma=True, search=3, searchparam=1)" + BR + "$select:msg:Select FPS Filter to Use;FlowFPS|clip = core.mv.FlowFPS(clip, sup, bvec, fvec, mask=2;BlockFPS|clip = core.mv.BlockFPS(clip, sup, bvec, fvec, mode=3, thscd2=12$, num=$enter_text:Enter The Num Value$, den=$enter_text:Enter The Den Value$)"))
-        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow | Core", "crop_string = ''" + BR + "resize_string = ''" + BR + "super_params = '{pel:1,scale:{up:0},gpu:1,full:false,rc:true}'" + BR + "analyse_params = '{block:{w:16},main:{search:{coarse:{type:4,distance:-6,bad:{sad:2000,range:24}},type:4}},refine:[{thsad:250}]}'" + BR + "smoothfps_params = '{gpuid:11,linear:true,rate:{num:60000,den:1001,abs:true},algo:23,mask:{area:200},scene:{}}'" + BR + "def interpolate(clip):" + BR + "    input = clip" + BR + "    if crop_string!='':" + BR + "        input = eval(crop_string)" + BR + "    if resize_string != '':" + BR + "        input = eval(resize_string)" + BR + "    super   = core.svp1.Super(input, super_params)" + BR + "    vectors = core.svp1.Analyse(super['clip'], super['data'], input, analyse_params)" + BR + "    smooth  = core.svp2.SmoothFps(input, super['clip'], super['data'], vectors['clip'], vectors['data'], smoothfps_params, src=clip)" + BR + "    smooth  = core.std.AssumeFPS(smooth, fpsnum=smooth.fps_num, fpsden=smooth.fps_den)" + BR + "    return smooth" + BR + "clip =  interpolate(clip)"))
-        ret.Add(framerate)
-
         Dim color As New FilterCategory("Color")
         color.Filters.Add(New VideoFilter(color.Name, "Dither | Gamma / Linear", "clip = $select:Gamma To Linear|Dither.gamma_to_linear;Linear To Gamma|Dither.linear_to_gamma$(clip, curve='$select:msg:Select the Color Curve;601;709;2020$')"))
         color.Filters.Add(New VideoFilter(color.Name, "Dither | Sigmoid", "$select:Sigmoid Inverse|clip = havsfunc.SigmoidInverse(clip);Sigmoid Direct|clip = havsfunc.SigmoidDirect(clip)$"))
@@ -981,10 +992,31 @@ Public Class FilterCategory
         color.Filters.Add(New VideoFilter(color.Name, "ColorSpace | Range", "$select:msg:Select Range;PC to TV|clip = core.fmtc.bitdepth(clip, fulls=True, fulld=False);TV to PC|clip = core.fmtc.bitdepth (clip, fulls=False, fulld=True)$"))
         color.Filters.Add(New VideoFilter(color.Name, "Convert | Tweak", "clip = adjust.Tweak(clip, sat=0.75, hue=115-138)"))
         color.Filters.Add(New VideoFilter(color.Name, "Convert | BitDepth (fmtc)", "clip = core.fmtc.bitdepth(clip, bits=$select:msg:Select BitDepth;8;10;12;16;32$)"))
-        color.Filters.Add(New VideoFilter(color.Name, "Convert | Format", "core.avs.z_ConvertFormat(clip, pixel_type='$enter_text:Enter the Format You Wish to Convert to$', colorspace_op='$select:msg:Select Input Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Input Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Input Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$=>$select:msg:Select Output Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Output Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Output Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$', dither_type='$select:msg:Select Dither Type;none;ordered;random;error_diffusion$')"))
+        color.Filters.Add(New VideoFilter(color.Name, "Convert | Format", "clip = core.avs.z_ConvertFormat(clip, pixel_type='$enter_text:Enter the Format You Wish to Convert to$', colorspace_op='$select:msg:Select Input Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Input Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Input Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$=>$select:msg:Select Output Color Matrix;rgb;709;unspec;fcc;470bg;170m;240;ycgco;2020ncl;2020cl;chromancl;chromacl;ictcp$:$select:msg:Select Output Color Transfer;709;unspec;470m;470bg;601;240m;linear;log100;log316;xvycc;srgb;2020_10;2020_12;st2084;std-b67$:$select:msg:Select Output Color Primaries;709;unspec;470m;470bg;170m;240m;film;2020;st428;st431-2;st432-1;jedec-p22$:$select:msg:Select Pixel Range;limited;l;full;f$', dither_type='$select:msg:Select Dither Type;none;ordered;random;error_diffusion$')"))
         color.Filters.Add(New VideoFilter(color.Name, "Convert | Convert To", "clip = core.resize.Bicubic(clip, format=vs.$select:COMPATBGR32;COMPATYUY2;GRAY16;GRAY8;GRAYH;GRAYS;RGB24;RGB27;RGB30;RGB48;RGBH;RGBS;YUV410P8;YUV411P8;YUV420P8;YUV420P9;YUV420P10;YUV420P12;YUV420P14;YUV420P16;YUV422P8;YUV422P9;YUV422P10;YUV422P12;YUV422P14;YUV422P16;YUV440P8;YUV444P8;YUV444P9;YUV444P10;YUV444P12;YUV444P14;YUV444P16;YUV444PH;YUV444PS$)"))
         color.Filters.Add(New VideoFilter(color.Name, "Convert | To 444", "clip = core.fmtc.resample(clip, css='444')"))
         ret.Add(color)
+
+        Dim crop As New FilterCategory("Crop")
+        crop.Filters.Add(New VideoFilter(crop.Name, "Crop", "clip = core.std.Crop(clip, %crop_left%, %crop_right%, %crop_top%, %crop_bottom%)"))
+        ret.Add(crop)
+
+        Dim field As New FilterCategory("Field")
+        field.Filters.Add(New VideoFilter(field.Name, "IVTC", "clip = core.vivtc.VFM(clip, 1)" + BR + "clip = core.vivtc.VDecimate(clip)"))
+        field.Filters.Add(New VideoFilter(field.Name, "W3FDIF", "clip = core.w3fdif.W3FDIF(clip,$select:msg:Select Order Option;BFF|0;TFF|1$,$select:msg:Select Interlacing Filter Coefficients;Simple|0;Complex|1$)"))
+        field.Filters.Add(New VideoFilter(field.Name, "Select", "$select:Even|clip = clip[::2];Odd|clip = clip[1::2]$"))
+        field.Filters.Add(New VideoFilter(field.Name, "eedi", "$select:eedi2|clip = core.eedi2.EEDI2;eedi3|clip = core.eedi3m.EEDI3$(clip,$select:msg:Select Field;Bottom Field|0;Top Field|1;Alternate Each Frame Bottom Field|2;Alternate Each Frame Top Field|3$)"))
+        field.Filters.Add(New VideoFilter(field.Name, "nnedi3", "$select:znedi3|clip = core.znedi3.nnedi3;nnedi3cl|clip = core.nnedi3cl.NNEDI3CL;nnedi3|clip = core.nnedi3.nnedi3$(clip, field=$select:msg:Select Field Option;Same Rate Bottom Field|0;Same Rate Top Field|1;Double Rate Alternates Bottom Field|2;Double Rate Alternates Top Field|3$)"))
+        field.Filters.Add(New VideoFilter(field.Name, "Field Base", "$select:Frame Based|clip = core.std.SetFieldBased(clip, 0);Bottom Field First|clip = core.std.SetFieldBased(clip, 1);Top Field First|clip = core.std.SetFieldBased(clip, 2)$"))
+        ret.Add(field)
+
+        Dim framerate As New FilterCategory("Frame Rate")
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS | AssumeFPS Source", "clip = core.std.AssumeFPS(clip, fpsnum=int(%media_info_video:FrameRate% * 1000), fpsden=1000)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "AssumeFPS | AssumeFPS", "clip = core.std.AssumeFPS(clip, None, $select:msg:Select a frame rate.;24000/1001|24000, 1001;24|24, 1;25|25, 1;30000/1001|30000, 1001;30|30, 1;50|50, 1;60000/1001|60000, 1001;60|60, 1$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "InterFrame", "clip = havsfunc.InterFrame(clip, Preset='Medium', Tuning='$select:msg:Select the Tuning Preset;Animation;Film;Smooth;Weak$', NewNum=$enter_text:Enter the NewNum Value$, NewDen=$enter_text:Enter the NewDen Value$, OverrideAlgo=$select:msg:Which Algorithm Do you Wish to Use?;Strong Predictions|2;Intelligent|13;Smoothest|23$, GPU=$select:msg:Enable GPU Feature?;True;False$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow | MV", "sup = core.mv.Super(clip, pel=2, hpad=0, vpad=0)" + BR + "bvec = core.mv.Analyse(sup, blksize=16, isb=True, chroma=True, search=3, searchparam=1)" + BR + "fvec = core.mv.Analyse(sup, blksize=16, isb=False, chroma=True, search=3, searchparam=1)" + BR + "$select:msg:Select FPS Filter to Use;FlowFPS|clip = core.mv.FlowFPS(clip, sup, bvec, fvec, mask=2;BlockFPS|clip = core.mv.BlockFPS(clip, sup, bvec, fvec, mode=3, thscd2=12$, num=$enter_text:Enter The Num Value$, den=$enter_text:Enter The Den Value$)"))
+        framerate.Filters.Add(New VideoFilter(framerate.Name, "SVPFlow | Core", "crop_string = ''" + BR + "resize_string = ''" + BR + "super_params = '{pel:1,scale:{up:0},gpu:1,full:false,rc:true}'" + BR + "analyse_params = '{block:{w:16},main:{search:{coarse:{type:4,distance:-6,bad:{sad:2000,range:24}},type:4}},refine:[{thsad:250}]}'" + BR + "smoothfps_params = '{gpuid:11,linear:true,rate:{num:60000,den:1001,abs:true},algo:23,mask:{area:200},scene:{}}'" + BR + "def interpolate(clip):" + BR + "    input = clip" + BR + "    if crop_string!='':" + BR + "        input = eval(crop_string)" + BR + "    if resize_string != '':" + BR + "        input = eval(resize_string)" + BR + "    super   = core.svp1.Super(input, super_params)" + BR + "    vectors = core.svp1.Analyse(super['clip'], super['data'], input, analyse_params)" + BR + "    smooth  = core.svp2.SmoothFps(input, super['clip'], super['data'], vectors['clip'], vectors['data'], smoothfps_params, src=clip)" + BR + "    smooth  = core.std.AssumeFPS(smooth, fpsnum=smooth.fps_num, fpsden=smooth.fps_den)" + BR + "    return smooth" + BR + "clip =  interpolate(clip)"))
+        ret.Add(framerate)
 
         Dim line As New FilterCategory("Line")
         line.Filters.Add(New VideoFilter(line.Name, "Anti-Aliasing | DAA", "clip = havsfunc.daa(clip)"))
@@ -996,14 +1028,12 @@ Public Class FilterCategory
         line.Filters.Add(New VideoFilter(line.Name, "Sharpen | SharpAAMcmod", "clip = muvsfunc.SharpAAMcmod(clip)"))
         ret.Add(line)
 
-        Dim field As New FilterCategory("Field")
-        field.Filters.Add(New VideoFilter(field.Name, "IVTC", "clip = core.vivtc.VFM(clip, 1)" + BR + "clip = core.vivtc.VDecimate(clip)"))
-        field.Filters.Add(New VideoFilter(field.Name, "W3FDIF", "clip = core.w3fdif.W3FDIF(clip,$select:msg:Select Order Option;BFF|0;TFF|1$,$select:msg:Select Interlacing Filter Coefficients;Simple|0;Complex|1$)"))
-        field.Filters.Add(New VideoFilter(field.Name, "Select", "$select:Even|clip = clip[::2];Odd|clip = clip[1::2]$"))
-        field.Filters.Add(New VideoFilter(field.Name, "eedi", "$select:eedi2|clip = core.eedi2.EEDI2;eedi3|clip = core.eedi3m.EEDI3$(clip,$select:msg:Select Field;Bottom Field|0;Top Field|1;Alternate Each Frame Bottom Field|2;Alternate Each Frame Top Field|3$)"))
-        field.Filters.Add(New VideoFilter(field.Name, "nnedi3", "$select:znedi3|clip = core.znedi3.nnedi3;nnedi3cl|clip = core.nnedi3cl.NNEDI3CL;nnedi3|clip = core.nnedi3.nnedi3$(clip, field=$select:msg:Select Field Option;Same Rate Bottom Field|0;Same Rate Top Field|1;Double Rate Alternates Bottom Field|2;Double Rate Alternates Top Field|3$)"))
-        field.Filters.Add(New VideoFilter(field.Name, "Field Base", "$select:Frame Based|clip = core.std.SetFieldBased(clip, 0);Bottom Field First|clip = core.std.SetFieldBased(clip, 1);Top Field First|clip = core.std.SetFieldBased(clip, 2)$"))
-        ret.Add(field)
+        Dim misc As New FilterCategory("Misc")
+        misc.Filters.Add(New VideoFilter(misc.Name, "UnSpec", "clip = core.resize.Point(clip, matrix_in_s='unspec',range_s='limited')" + BR + "clip = core.std.AssumeFPS(clip, fpsnum=int(%media_info_video:FrameRate% * 1000), fpsden=1000)" + BR + "clip = core.std.SetFrameProp(clip=clip, prop='_ColorRange', intval=1)"))
+        misc.Filters.Add(New VideoFilter(misc.Name, "Histogram", "clip = muvsfunc.DisplayHistogram(clip)"))
+        misc.Filters.Add(New VideoFilter(misc.Name, "Cube", "clip = core.timecube.Cube(clip, cube=r""$browse_file$"")"))
+        misc.Filters.Add(New VideoFilter(misc.Name, "Anamorphic to Standard", "clip = core.fmtc.resample (clip, w=1280, h=720, css='444')" + BR + "clip = core.fmtc.matrix (clip, mat='709', col_fam=vs.RGB)" + BR + "clip = core.fmtc.transfer (clip, transs='1886', transd='srgb')" + BR + "clip = core.fmtc.bitdepth (clip, bits=8)"))
+        ret.Add(misc)
 
         Dim noise As New FilterCategory("Noise")
         noise.Filters.Add(New VideoFilter(noise.Name, "RemoveGrain | SMDegrain", "clip = havsfunc.SMDegrain(clip, contrasharp=True)"))
@@ -1014,20 +1044,9 @@ Public Class FilterCategory
         noise.Filters.Add(New VideoFilter(noise.Name, "BM3D", "clip = mvsfunc.BM3D(clip, sigma=[3,3,3], radius1=0)"))
         ret.Add(noise)
 
-        Dim misc As New FilterCategory("Misc")
-        misc.Filters.Add(New VideoFilter(misc.Name, "UnSpec", "clip = core.resize.Point(clip, matrix_in_s='unspec',range_s='limited')" + BR + "clip = core.std.AssumeFPS(clip, fpsnum=int(%media_info_video:FrameRate% * 1000), fpsden=1000)" + BR + "clip = core.std.SetFrameProp(clip=clip, prop='_ColorRange', intval=1)"))
-        misc.Filters.Add(New VideoFilter(misc.Name, "Histogram", "clip = muvsfunc.DisplayHistogram(clip)"))
-        misc.Filters.Add(New VideoFilter(misc.Name, "Cube", "clip = core.timecube.Cube(clip, cube=r""$browse_file$"")"))
-        misc.Filters.Add(New VideoFilter(misc.Name, "Anamorphic to Standard", "clip = core.fmtc.resample (clip, w=1280, h=720, css='444')" + BR + "clip = core.fmtc.matrix (clip, mat='709', col_fam=vs.RGB)" + BR + "clip = core.fmtc.transfer (clip, transs='1886', transd='srgb')" + BR + "clip = core.fmtc.bitdepth (clip, bits=8)"))
-        ret.Add(misc)
-
         Dim resize As New FilterCategory("Resize")
         resize.Filters.Add(New VideoFilter(resize.Name, "Resize...", "clip = $select:Bilinear|core.resize.Bilinear;Bicubic|core.resize.Bicubic;Point|core.resize.Point;Lanczos|core.resize.Lanczos;Spline16|core.resize.Spline16;Spline36|core.resize.Spline36;Spline64|core.resize.Spline64;Dither_Resize16|Dither.Resize16nr;Resample|core.fmtc.resample$(clip, %target_width%, %target_height%)"))
         ret.Add(resize)
-
-        Dim crop As New FilterCategory("Crop")
-        crop.Filters.Add(New VideoFilter(crop.Name, "Crop", "clip = core.std.Crop(clip, %crop_left%, %crop_right%, %crop_top%, %crop_bottom%)"))
-        ret.Add(crop)
 
         Dim restoration As New FilterCategory("Restoration")
         restoration.Filters.Add(New VideoFilter(restoration.Name, "RCR | ColorBanding", "$select:GradFun3|clip = muvsfunc.GradFun3(src=clip, mode=6, smode=1);f3kdb|clip = core.f3kdb.Deband(clip)$"))
@@ -1043,6 +1062,12 @@ Public Class FilterCategory
         restoration.Filters.Add(New VideoFilter(restoration.Name, "RCR | Vinverse", "$select:Vinverse|clip = havsfunc.Vinverse(clip);Vinverse2|clip = havsfunc.Vinverse2(clip)$"))
         restoration.Filters.Add(New VideoFilter(restoration.Name, "RCR | CNR2", "clip = core.cnr2.Cnr2(clip)"))
         ret.Add(restoration)
+
+        Dim rotation As New FilterCategory("Rotation")
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Left", $"clip = core.std.FlipHorizontal(clip){BR}clip = core.std.Transpose(clip)"))
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Right", $"clip = core.std.FlipVertical(clip){BR}clip = core.std.Transpose(clip)"))
+        rotation.Filters.Add(New VideoFilter(rotation.Name, "Upside Down", $"clip = core.std.Turn180(clip)"))
+        ret.Add(rotation)
 
         FilterCategory.AddDefaults(ScriptEngine.VapourSynth, ret)
 

@@ -83,6 +83,7 @@ Public Class MediaInfo
                     at.Title = GetAudio(index, "Title").Trim
                     at.Forced = GetAudio(index, "Forced") = "Yes"
                     at.Default = GetAudio(index, "Default") = "Yes"
+                    at.SBR = GetAudio(index, "Format/String").ContainsEx("SBR")
 
                     Dim lm = GetAudio(index, "Language_More")
 
@@ -104,7 +105,9 @@ Public Class MediaInfo
                         at.Bitrate2 = CInt(values(1).ToInt / 1000)
                     End If
 
-                    If at.Bitrate = 0 Then at.Bitrate = GetAudio(index, "FromStats_BitRate").ToInt
+                    If at.Bitrate = 0 Then
+                        at.Bitrate = GetAudio(index, "FromStats_BitRate").ToInt
+                    End If
 
                     at.Delay = GetAudio(index, "Video_Delay").ToInt
 
@@ -251,7 +254,10 @@ Public Class MediaInfo
     End Function
 
     Shared Function GetInfo(path As String, streamKind As MediaInfoStreamKind, parameter As String) As String
-        If path = "" Then Return ""
+        If path = "" Then
+            Return ""
+        End If
+
         Return GetMediaInfo(path).GetInfo(streamKind, parameter)
     End Function
 

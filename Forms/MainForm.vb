@@ -1370,6 +1370,15 @@ Public Class MainForm
         'ObjectHelp.GetCompareString(p).WriteFile(Folder.Desktop + "\test2.txt", Encoding.ASCII)
 
         If ObjectHelp.GetCompareString(g.SavedProject) <> ObjectHelp.GetCompareString(p) Then
+            If s.AutoSaveProject AndAlso p.SourceFile <> "" Then
+                If g.ProjectPath Is Nothing Then
+                    g.ProjectPath = p.TempDir + p.TargetFile.Base + ".srip"
+                End If
+
+                SaveProjectPath(g.ProjectPath)
+                Return False
+            End If
+
             Using td As New TaskDialog(Of DialogResult)
                 td.MainInstruction = "Save changed project?"
                 td.AddButton("Save", DialogResult.Yes)
@@ -1413,7 +1422,7 @@ Public Class MainForm
                                 name = "..." + name.Remove(0, name.Length - 70)
                             End If
 
-                            mi.DropDownItems.Add(New ActionMenuItem(name, Sub() LoadProject(recentProj)))
+                            mi.DropDownItems.Add(New MenuItemEx(name, Sub() LoadProject(recentProj)))
                         End If
                     Next
                 End SyncLock
@@ -1448,7 +1457,7 @@ Public Class MainForm
                     iMenuItem.DropDownItems.ClearAndDisplose
 
                     For Each pack In Package.Items.Values
-                        ActionMenuItem.Add(iMenuItem.DropDownItems, pack.Name.Substring(0, 1).Upper + " | " + pack.Name, Sub() pack.ShowHelp())
+                        MenuItemEx.Add(iMenuItem.DropDownItems, pack.Name.Substring(0, 1).Upper + " | " + pack.ID, Sub() pack.ShowHelp())
                     Next
                 End If
             End If
@@ -1478,14 +1487,14 @@ Public Class MainForm
 
                     For Each path In files
                         If Not events.Contains(path.FileName.Left(".")) AndAlso Not path.FileName.StartsWith("_") Then
-                            ActionMenuItem.Add(menuItem.DropDownItems,
+                            MenuItemEx.Add(menuItem.DropDownItems,
                                                path.FileName.Base,
                                                Sub() g.DefaultCommands.ExecuteScriptFile(path))
                         End If
                     Next
 
                     menuItem.DropDownItems.Add(New ToolStripSeparator)
-                    ActionMenuItem.Add(menuItem.DropDownItems, "Open Script Folder", Sub() g.ShellExecute(Folder.Scripts))
+                    MenuItemEx.Add(menuItem.DropDownItems, "Open Script Folder", Sub() g.ShellExecute(Folder.Scripts))
                 End If
             End If
         Next
@@ -1513,7 +1522,7 @@ Public Class MainForm
                 i.CustomMenuItem.Parameters(0).Equals(DynamicMenuItemID.TemplateProjects) Then
 
                 i.DropDownItems.ClearAndDisplose
-                Dim items As New List(Of ActionMenuItem)
+                Dim items As New List(Of MenuItemEx)
 
                 For Each i2 In files
                     Dim base = i2.Base
@@ -1526,12 +1535,12 @@ Public Class MainForm
                         base = "Backup | " + base
                     End If
 
-                    ActionMenuItem.Add(i.DropDownItems, base, AddressOf LoadProject, i2, Nothing)
+                    MenuItemEx.Add(i.DropDownItems, base, AddressOf LoadProject, i2, Nothing)
                 Next
 
                 i.DropDownItems.Add("-")
-                ActionMenuItem.Add(i.DropDownItems, "Explore", Sub() g.ShellExecute(Folder.Template), "Opens the directory containing the templates.")
-                ActionMenuItem.Add(i.DropDownItems, "Restore", AddressOf ResetTemplates, "Restores the default templates.")
+                MenuItemEx.Add(i.DropDownItems, "Explore", Sub() g.ShellExecute(Folder.Template), "Opens the directory containing the templates.")
+                MenuItemEx.Add(i.DropDownItems, "Restore", AddressOf ResetTemplates, "Restores the default templates.")
 
                 Exit For
             End If
@@ -1655,10 +1664,6 @@ Public Class MainForm
                 p.Init()
             End Try
 
-            If p.SourceFile <> "" AndAlso Not FrameServerHelp.VerifyAviSynthLinks() Then
-                Throw New AbortException
-            End If
-
             Log = p.Log
 
             If File.Exists(Folder.Temp + "staxrip.log") Then
@@ -1669,7 +1674,7 @@ Public Class MainForm
 
             Text = path.Base + " - " + Application.ProductName + " " + Application.ProductVersion
 
-            If g.Is32Bit Then
+            If Not Environment.Is64BitProcess Then
                 Text += " (32 bit)"
             End If
 
@@ -2051,6 +2056,7 @@ Public Class MainForm
             g.SetTempDir()
 
             Dim sourcePAR = MediaInfo.GetVideo(p.LastOriginalSourceFile, "PixelAspectRatio")
+
             If sourcePAR <> "" Then
                 p.SourcePAR.X = CInt(Convert.ToSingle(sourcePAR, CultureInfo.InvariantCulture) * 1000)
                 p.SourcePAR.Y = 1000
@@ -2155,7 +2161,9 @@ Public Class MainForm
             ElseIf p.SourceFile.Ext = "vpy" Then
                 p.Script.Engine = ScriptEngine.VapourSynth
                 p.Script.Filters.Clear()
-                Dim code = "from importlib.machinery import SourceFileLoader" + BR +
+                Dim code = "import vapoursynth as vs" + BR +
+                           "core = vs.get_core()" + BR +
+                           "from importlib.machinery import SourceFileLoader" + BR +
                            $"SourceFileLoader('clip', r""{p.SourceFile}"").load_module()" + BR +
                            "clip = vs.get_output()"
                 p.Script.Filters.Add(New VideoFilter("Source", "VS Script Import", code))
@@ -2201,25 +2209,6 @@ Public Class MainForm
                         End If
                     End If
                 End If
-            End If
-
-            Dim errorMsg = ""
-
-            Try
-                errorMsg = p.SourceScript.GetError
-            Catch ex As Exception
-                errorMsg = ex.Message
-            End Try
-
-            If errorMsg <> "" Then
-                Log.WriteHeader("Error opening source")
-                Log.WriteLine(errorMsg + BR2)
-                Log.WriteLine(p.SourceScript.GetFullScript)
-                Log.Save()
-
-                MsgError("Script Error", errorMsg, Handle)
-                p.Script.Synchronize()
-                Throw New AbortException
             End If
 
             UpdateSourceParameters()
@@ -2371,6 +2360,35 @@ Public Class MainForm
         Dim preferences = If(p.Script.IsAviSynth,
             s.AviSynthFilterPreferences, s.VapourSynthFilterPreferences)
 
+        Dim editAVS = p.Script.IsAviSynth AndAlso p.SourceFile.Ext <> "avs"
+        Dim editVS = p.Script.IsVapourSynth AndAlso p.SourceFile.Ext <> "vpy"
+
+        If p.AutoRotation AndAlso (editAVS OrElse editVS) Then
+            Dim rot = MediaInfo.GetVideo(p.SourceFile, "Rotation").ToDouble
+
+            If rot <> 0 Then
+                Dim name As String
+
+                Select Case rot
+                    Case 90
+                        name = "Right"
+                    Case 180
+                        name = "Upside Down"
+                    Case 270
+                        name = "Left"
+                    Case Else
+                End Select
+
+                If name <> "" Then
+                    Dim filter = VideoFilter.GetDefault("Rotation", name, p.Script.Engine)
+
+                    If Not filter Is Nothing Then
+                        p.Script.SetFilter(filter.Category, filter.Name, filter.Script)
+                    End If
+                End If
+            End If
+        End If
+
         Dim sourceFilter = p.Script.GetFilter("Source")
 
         SetSourceFilter(sourceFilter, preferences, profiles, True, True, False, False)
@@ -2378,17 +2396,14 @@ Public Class MainForm
         SetSourceFilter(sourceFilter, preferences, profiles, True, False, False, True)
         SetSourceFilter(sourceFilter, preferences, profiles, False, False, False, False)
 
-        Dim editAVS = p.Script.IsAviSynth AndAlso p.SourceFile.Ext <> "avs"
-        Dim editVS = p.Script.Engine = ScriptEngine.VapourSynth AndAlso p.SourceFile.Ext <> "vpy"
-
         If editAVS Then
             If Not sourceFilter.Script.Contains("(") Then
-                Dim filter = FilterCategory.GetAviSynthDefaults.Where(Function(cat) cat.Name = "Source").First.Filters.Where(Function(cat) cat.Name = "FFVideoSource").First
+                Dim filter = VideoFilter.GetDefault("Source", "FFVideoSource")
                 p.Script.SetFilter(filter.Category, filter.Name, filter.Script)
             End If
         ElseIf editVS Then
             If Not sourceFilter.Script.Contains("(") Then
-                Dim filter = FilterCategory.GetVapourSynthDefaults.Where(Function(cat) cat.Name = "Source").First.Filters.Where(Function(cat) cat.Name = "ffms2").First
+                Dim filter = VideoFilter.GetDefault("Source", "ffms2", ScriptEngine.VapourSynth)
                 p.Script.SetFilter(filter.Category, filter.Name, filter.Script)
             End If
         End If
@@ -2399,13 +2414,51 @@ Public Class MainForm
             End If
         Next
 
+        Dim errorMsg As String
+
+        Try
+            errorMsg = p.SourceScript.GetError
+        Catch ex As Exception
+            errorMsg = ex.Message
+        End Try
+
+        If errorMsg <> "" Then
+            Log.WriteHeader("Error opening source")
+            Log.WriteLine(errorMsg + BR2)
+            Log.WriteLine(p.SourceScript.GetFullScript)
+            Log.Save()
+
+            MsgError("Script Error", errorMsg, Handle)
+            p.Script.Synchronize()
+            Throw New AbortException
+        End If
+
+        If Not editAVS AndAlso Not editVS Then
+            Exit Sub
+        End If
+
+        Dim sourceInfo = p.SourceScript.Info
+
+        If s.FixFrameRate Then
+            Dim fixedFrameRate = FixFrameRate(sourceInfo.FrameRateNum, sourceInfo.FrameRateDen)
+
+            If fixedFrameRate.num <> sourceInfo.FrameRateNum OrElse fixedFrameRate.den <> sourceInfo.FrameRateDen Then
+                If editAVS Then
+                    p.Script.GetFilter("Source").Script += BR + "AssumeFPS(" & fixedFrameRate.num & ", " & fixedFrameRate.den & ")"
+                Else
+                    p.Script.GetFilter("Source").Script += BR + "clip = core.std.AssumeFPS(clip, None, " & fixedFrameRate.num & ", " & fixedFrameRate.den & ")"
+                End If
+
+                p.SourceScript.Synchronize()
+            End If
+        End If
+
         If editAVS Then
             Dim miFPS = MediaInfo.GetFrameRate(p.FirstOriginalSourceFile, 25)
-            Dim avsFPS = p.SourceScript.GetFramerate
+            Dim avsFPS = sourceInfo.FrameRate
 
             If (CInt(miFPS) * 2) = CInt(avsFPS) Then
-                Dim src = p.Script.GetFilter("Source")
-                src.Script = src.Script + BR + "SelectEven().AssumeFPS(" & miFPS.ToInvariantString + ")"
+                p.Script.GetFilter("Source").Script += BR + "SelectEven().AssumeFPS(" & miFPS.ToInvariantString + ")"
                 p.SourceScript.Synchronize()
             End If
         End If
@@ -2435,6 +2488,16 @@ Public Class MainForm
             End If
         End If
     End Sub
+
+    Function FixFrameRate(num As Integer, den As Integer) As (num As Integer, den As Integer)
+        Dim rate = num / den
+
+        If rate < 50 AndAlso rate > 49 Then
+            Return (50, 1)
+        End If
+
+        Return (num, den)
+    End Function
 
     Sub SetSourceFilter(
         sourceFilter As VideoFilter,
@@ -2652,22 +2715,22 @@ Public Class MainForm
         tbTargetWidth.ReadOnly = Not isResized
         tbTargetHeight.ReadOnly = Not isResized
 
-        g.Highlight(False, lSAR)
-        g.Highlight(False, llAudioProfile0)
-        g.Highlight(False, llAudioProfile1)
-        g.Highlight(False, lAspectRatioError)
-        g.Highlight(False, lZoom)
-        g.Highlight(False, tbAudioFile0)
-        g.Highlight(False, tbAudioFile1)
-        g.Highlight(False, tbBitrate)
-        g.Highlight(False, tbTargetSize)
-        g.Highlight(False, tbSourceFile)
-        g.Highlight(False, tbTargetHeight)
-        g.Highlight(False, tbTargetFile)
-        g.Highlight(False, tbTargetWidth)
-        g.Highlight(False, llMuxer)
-        g.Highlight(False, lgbEncoder.Label)
-        g.Highlight(False, laTarget2)
+        Highlight(False, lSAR)
+        Highlight(False, llAudioProfile0)
+        Highlight(False, llAudioProfile1)
+        Highlight(False, lAspectRatioError)
+        Highlight(False, lZoom)
+        Highlight(False, tbAudioFile0)
+        Highlight(False, tbAudioFile1)
+        Highlight(False, tbBitrate)
+        Highlight(False, tbTargetSize)
+        Highlight(False, tbSourceFile)
+        Highlight(False, tbTargetHeight)
+        Highlight(False, tbTargetFile)
+        Highlight(False, tbTargetWidth)
+        Highlight(False, llMuxer)
+        Highlight(False, lgbEncoder.Label)
+        Highlight(False, laTarget2)
 
         Dim cropw = p.SourceWidth
         Dim croph = p.SourceHeight
@@ -2733,6 +2796,7 @@ Public Class MainForm
         If p.SourceSeconds > 0 Then
             Dim size = If(p.SourceVideoSize > 0, p.SourceVideoSize, p.SourceSize)
             Dim sizeText = If(size / 1024 ^ 2 < 1024, CInt(size / 1024 ^ 2).ToString + "MiB", (size / 1024 ^ 3).ToString("f1") + "GiB")
+
             If size <> p.SourceVideoSize Then
                 sizeText = $"[{sizeText}]"
             End If
@@ -2845,7 +2909,7 @@ Public Class MainForm
 
             If p.SourceFile = p.TargetFile Then
                 If ProcessTip("The source and target filepath is identical.") Then
-                    g.Highlight(True, tbTargetFile)
+                    Highlight(tbTargetFile)
                     gbAssistant.Text = "Invalid Targetpath"
                     CanIgnoreTip = False
                     Return False
@@ -2860,14 +2924,13 @@ Public Class MainForm
                 Return False
             End If
 
-            If (p.Audio0.File <> "" AndAlso p.Audio0.File = p.Audio1.File AndAlso
-                p.Audio0.Stream Is Nothing) OrElse
+            If (p.Audio0.File <> "" AndAlso p.Audio0.File = p.Audio1.File AndAlso p.Audio0.Stream Is Nothing) OrElse
                 (Not p.Audio0.Stream Is Nothing AndAlso Not p.Audio1.Stream Is Nothing AndAlso
                 p.Audio0.Stream.StreamOrder = p.Audio1.Stream.StreamOrder) Then
 
                 If ProcessTip("The first and second audio source files or streams are identical.") Then
-                    g.Highlight(True, tbAudioFile0)
-                    g.Highlight(True, tbAudioFile1)
+                    Highlight(tbAudioFile0)
+                    Highlight(tbAudioFile1)
                     gbAssistant.Text = "Invalid Audio Settings"
                     Return False
                 End If
@@ -2876,17 +2939,30 @@ Public Class MainForm
             If Not p.VideoEncoder.Muxer.IsSupported(p.VideoEncoder.OutputExt) Then
                 If ProcessTip("The encoder outputs '" + p.VideoEncoder.OutputExt + "' but the container '" + p.VideoEncoder.Muxer.Name + "' supports only " + p.VideoEncoder.Muxer.SupportedInputTypes.Join(", ") + ".") Then
                     gbAssistant.Text = "Encoder conflicts with container"
-                    g.Highlight(True, llMuxer)
-                    g.Highlight(True, lgbEncoder.Label)
+                    Highlight(llMuxer)
+                    Highlight(lgbEncoder.Label)
                     CanIgnoreTip = False
                     Return False
                 End If
             End If
 
             For Each ap In AudioProfile.GetProfiles
+                If ap.File = "" Then
+                    Continue For
+                End If
+
+                If ap.AudioCodec = AudioCodec.AC3 AndAlso CInt(ap.Bitrate) Mod If(CInt(ap.Bitrate) > 256, 64, 32) <> 0 Then
+                    If ProcessTip($"The AC3 bitrate {CInt(ap.Bitrate)} is not specification compliant.") Then
+                        Highlight(GetAudioTextBox(ap))
+                        gbAssistant.Text = "Invalid Audio Bitrate"
+                        Return False
+                    End If
+                End If
+
                 If ap.File = p.TargetFile Then
                     If ProcessTip("The audio source and target filepath is identical.") Then
-                        g.Highlight(True, tbTargetFile)
+                        Highlight(tbTargetFile)
+                        Highlight(GetAudioTextBox(ap))
                         gbAssistant.Text = "Invalid Targetpath"
                         CanIgnoreTip = False
                         Return False
@@ -2895,16 +2971,21 @@ Public Class MainForm
 
                 If Math.Abs(ap.Delay) > 2000 Then
                     If ProcessTip("The audio delay is unusual high indicating a sync problem.") Then
-                        g.Highlight(True, tbAudioFile0)
+                        Highlight(GetAudioTextBox(ap))
                         gbAssistant.Text = "Unusual high audio delay"
                         Return False
                     End If
                 End If
 
-                If ap.File <> "" AndAlso Not p.VideoEncoder.Muxer.IsSupported(ap.OutputFileType) AndAlso Not ap.OutputFileType = "ignore" Then
-                    If ProcessTip("The audio format is '" + ap.OutputFileType + "' but the container '" + p.VideoEncoder.Muxer.Name + "' supports only " + p.VideoEncoder.Muxer.SupportedInputTypes.Join(", ") + ". Select another audio profile or another container.") Then
-                        g.Highlight(True, llMuxer)
-                        gbAssistant.Text = "Audio format conflicts with container"
+                If Not p.VideoEncoder.Muxer.IsSupported(ap.OutputFileType) AndAlso Not ap.OutputFileType = "ignore" Then
+                    If ProcessTip("The audio format is '" + ap.OutputFileType + "' but the container '" +
+                        p.VideoEncoder.Muxer.Name + "' supports only " +
+                        p.VideoEncoder.Muxer.SupportedInputTypes.Join(", ") +
+                        ". Select another audio profile or another container.") Then
+
+                        Highlight(llMuxer)
+                        Highlight(GetAudioTextBox(ap))
+                        gbAssistant.Text = "Audio format not compatible with container"
                         CanIgnoreTip = False
                         Return False
                     End If
@@ -2913,7 +2994,7 @@ Public Class MainForm
 
             If p.VideoEncoder.Muxer.OutputExtFull <> p.TargetFile.ExtFull Then
                 If ProcessTip("The container requires " + p.VideoEncoder.Muxer.OutputExt.ToUpper + " as target file type.") Then
-                    g.Highlight(True, tbTargetFile)
+                    Highlight(tbTargetFile)
                     gbAssistant.Text = "Invalid File Type"
                     CanIgnoreTip = False
                     Return False
@@ -2935,7 +3016,7 @@ Public Class MainForm
                 p.RemindArError AndAlso p.CustomTargetPAR <> "1:1" Then
 
                 If ProcessTip("Use the resize slider to correct the aspect ratio error or click next to encode anamorphic.") Then
-                    g.Highlight(True, lAspectRatioError)
+                    Highlight(lAspectRatioError)
                     gbAssistant.Text = "Aspect Ratio Error"
                     Return False
                 End If
@@ -2975,7 +3056,7 @@ Public Class MainForm
             If p.RemindToDoCompCheck AndAlso p.VideoEncoder.IsCompCheckEnabled AndAlso p.Compressibility = 0 Then
                 If ProcessTip("Click here to start the compressibility check. The compressibility check helps to finds the ideal bitrate or image size.") Then
                     AssistantMethod = AddressOf p.VideoEncoder.RunCompCheck
-                    g.Highlight(True, laTarget2)
+                    Highlight(laTarget2)
                     gbAssistant.Text = "Compressibility Check"
                     Return False
                 End If
@@ -3001,6 +3082,7 @@ Public Class MainForm
             End If
 
             If p.Script.IsAviSynth AndAlso TypeOf p.VideoEncoder Is x264Enc AndAlso
+                Not Package.x264.Version.Contains("aMod") AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV420P8 AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV420P8_ AndAlso
                 p.Script.Info.ColorSpace <> ColorSpace.YUV422P8 AndAlso
@@ -3021,8 +3103,8 @@ Public Class MainForm
                 If ProcessTip("Change output width to be divisible by " & p.ForcedOutputMod &
                               " or customize:" + BR + "Options > Image > Output Mod") Then
                     CanIgnoreTip = Not p.AutoCorrectCropValues
-                    g.Highlight(True, tbTargetWidth)
-                    g.Highlight(True, lSAR)
+                    Highlight(tbTargetWidth)
+                    Highlight(lSAR)
                     gbAssistant.Text = "Invalid Target Width"
                     Return False
                 End If
@@ -3032,8 +3114,8 @@ Public Class MainForm
                 If ProcessTip("Change output height to be divisible by " & p.ForcedOutputMod &
                               " or customize:" + BR + "Options > Image > Output Mod") Then
                     CanIgnoreTip = Not p.AutoCorrectCropValues
-                    g.Highlight(True, tbTargetHeight)
-                    g.Highlight(True, lSAR)
+                    Highlight(tbTargetHeight)
+                    Highlight(lSAR)
                     gbAssistant.Text = "Invalid Target Height"
                     Return False
                 End If
@@ -3046,11 +3128,11 @@ Public Class MainForm
                     value > (p.VideoEncoder.AutoCompCheckValue + 20) Then
 
                     If ProcessTip("Aimed quality value is more than 20% off, change the image or file size to get something between 50% and 70% quality.") Then
-                        g.Highlight(True, tbTargetSize)
-                        g.Highlight(True, tbBitrate)
-                        g.Highlight(True, tbTargetWidth)
-                        g.Highlight(True, tbTargetHeight)
-                        g.Highlight(True, laTarget2)
+                        Highlight(tbTargetSize)
+                        Highlight(tbBitrate)
+                        Highlight(tbTargetWidth)
+                        Highlight(tbTargetHeight)
+                        Highlight(laTarget2)
                         laTarget2.BackColor = Color.Red
                         gbAssistant.Text = "Quality"
                         Return False
@@ -3111,9 +3193,36 @@ Public Class MainForm
         AssistantPassed = True
     End Function
 
+    Sub Highlight(c As Control)
+        Highlight(True, c)
+    End Sub
+
+    Sub Highlight(highlight As Boolean, c As Control)
+        If c Is Nothing Then
+            Exit Sub
+        End If
+
+        If highlight Then
+            c.BackColor = Color.Orange
+        Else
+            If TypeOf c Is Label OrElse TypeOf c Is GroupBox Then
+                c.BackColor = SystemColors.Control
+            ElseIf TypeOf c Is TextBox AndAlso DirectCast(c, TextBox).ReadOnly Then
+                c.BackColor = SystemColors.Control
+            Else
+                c.BackColor = SystemColors.Window
+            End If
+        End If
+    End Sub
+
     Sub OpenTargetFolder()
         g.ShellExecute(p.TargetFile.Dir)
     End Sub
+
+    Function GetAudioTextBox(ap As AudioProfile) As TextBox
+        If ap Is p.Audio0 Then Return tbAudioFile0
+        If ap Is p.Audio1 Then Return tbAudioFile1
+    End Function
 
     Dim BlockAudioTextChanged As Boolean
 
@@ -3394,6 +3503,10 @@ Public Class MainForm
             b.Text = "Include beta versions for update check"
             b.Field = NameOf(s.CheckForUpdatesBeta)
 
+            b = ui.AddBool
+            b.Text = "Save projects automatically"
+            b.Field = NameOf(s.AutoSaveProject)
+
             b = ui.AddBool()
             b.Text = "Show template selection when loading new files"
             b.Field = NameOf(s.ShowTemplateSelection)
@@ -3549,6 +3662,10 @@ Public Class MainForm
             b.Help = "After a source is loaded, automatically add a filter to convert chroma subsampling to 4:2:0"
             b.Field = NameOf(s.ConvertChromaSubsampling)
 
+            b = ui.AddBool
+            b.Text = "Add filter to automatically correct the frame rate."
+            b.Field = NameOf(s.FixFrameRate)
+
             n = ui.AddNum
             n.Text = "Number of frames used for auto crop"
             n.Config = {5, 20}
@@ -3628,6 +3745,7 @@ Public Class MainForm
                     Icon = g.Icon
                 End If
 
+                FrameServerHelp.AviSynthToolPath()
                 g.SaveSettings()
             End If
 
@@ -3764,6 +3882,8 @@ Public Class MainForm
 
     <Command("Dialog to manage external tools.")>
     Sub ShowAppsDialog()
+        FrameServerHelp.AviSynthToolPath()
+
         Using form As New AppsForm
             Dim found As Boolean
 
@@ -3828,12 +3948,8 @@ Public Class MainForm
         End If
     End Function
 
-    <Command("Placeholder for dynamically updated menu items.")>
-    Sub DynamicMenuItem(<DispName("ID")> id As DynamicMenuItemID)
-    End Sub
-
     Sub PopulateProfileMenu(id As DynamicMenuItemID)
-        For Each i In CustomMainMenu.MenuItems.OfType(Of MenuItemEx)()
+        For Each i In CustomMainMenu.MenuItems
             If i.CustomMenuItem.MethodName = "DynamicMenuItem" AndAlso
                 i.CustomMenuItem.Parameters(0).Equals(id) Then
 
@@ -4095,12 +4211,12 @@ Public Class MainForm
 
     <Command("Dialog to edit filters.")>
     Sub ShowFiltersEditor()
-        FiltersListView.ShowEditor()
+        FiltersListView.ShowCodeEditor()
     End Sub
 
     <Command("Dialog to preview script code.")>
     Sub ShowCodePreview()
-        g.CodePreview(p.Script.GetFullScript)
+        g.ShowCodePreview(p.Script.GetFullScript)
     End Sub
 
     <Command("Dialog to configure project options.")>
@@ -4321,7 +4437,6 @@ Public Class MainForm
             Dim staxRipThumbnailOption = ui.AddBool()
             Dim mtnThumbnailOption = ui.AddBool()
 
-
             thumbOptions.Text = "Thumbnail Choices:"
             thumbOptions.Add("StaxRip Thumbnails", 0)
             thumbOptions.Add("MTN Thumbnails", 1)
@@ -4352,6 +4467,11 @@ Public Class MainForm
             b.Text = "Import VUI metadata"
             b.Help = "Imports VUI metadata such as HDR from the source file to the video encoder."
             b.Field = NameOf(p.ImportVUIMetadata)
+
+            b = ui.AddBool
+            b.Text = "Auto-rotate video after loading when possible"
+            b.Help = "Auto-rotate video after loading when the source file/container supports it."
+            b.Field = NameOf(p.AutoRotation)
 
             Dim subPage = ui.CreateFlowPage("Subtitles", True)
 
@@ -4612,42 +4732,7 @@ Public Class MainForm
         End Using
     End Sub
 
-    Function GetFilterProfilesText(categories As List(Of FilterCategory)) As String
-        Dim ret = ""
-        Dim wasMultiline As Boolean
-
-        For Each i In categories
-            ret += "[" + i.Name + "]" + BR
-
-            For Each filter In i.Filters
-                If filter.Script.Contains(BR) Then
-                    Dim lines = filter.Script.SplitLinesNoEmpty
-
-                    For x = 0 To lines.Length - 1
-                        lines(x) = "    " + lines(x)
-                    Next
-
-                    ret += BR + filter.Path + " =" + BR + lines.Join(BR) + BR
-                    wasMultiline = True
-                Else
-                    If wasMultiline Then
-                        ret += BR
-                    End If
-
-                    ret += filter.Path + " = " + filter.Script + BR
-                    wasMultiline = False
-                End If
-            Next
-
-            If Not ret.EndsWith(BR2) Then
-                ret += BR
-            End If
-        Next
-
-        Return ret
-    End Function
-
-    <Command("Dialog to configure AviSynth filter profiles.")>
+    <Command("Dialog to configure filter profiles.")>
     Sub ShowFilterProfilesDialog()
         Dim filterProfiles = If(p.Script.IsAviSynth, s.AviSynthProfiles, s.VapourSynthProfiles)
         Dim getDefaults = If(p.Script.IsAviSynth, Function() FilterCategory.GetAviSynthDefaults, Function() FilterCategory.GetVapourSynthDefaults)
@@ -4655,17 +4740,17 @@ Public Class MainForm
         Using dialog As New MacroEditorDialog
             dialog.SetScriptDefaults()
             dialog.Text = "Filter Profiles"
-            dialog.MacroEditorControl.Value = GetFilterProfilesText(filterProfiles)
+            dialog.MacroEditorControl.Value = g.GetFilterProfilesText(filterProfiles)
             dialog.bnContext.Text = " Restore Defaults... "
             dialog.bnContext.Visible = True
-            dialog.MacroEditorControl.rtbDefaults.Text = GetFilterProfilesText(getDefaults())
+            dialog.MacroEditorControl.rtbDefaults.Text = g.GetFilterProfilesText(getDefaults())
             dialog.bnContext.AddClickAction(Sub()
                                                 If MsgOK("Restore defaults?") Then
-                                                    dialog.MacroEditorControl.Value = GetFilterProfilesText(getDefaults())
+                                                    dialog.MacroEditorControl.Value = g.GetFilterProfilesText(getDefaults())
                                                 End If
                                             End Sub)
 
-            If dialog.ShowDialog(Me) = DialogResult.OK Then
+            If dialog.ShowDialog() = DialogResult.OK Then
                 filterProfiles.Clear()
                 Dim cat As FilterCategory
                 Dim filter As VideoFilter
@@ -4724,7 +4809,7 @@ Public Class MainForm
                 Next
 
                 g.SaveSettings()
-                FiltersListView.RebuildMenu()
+                g.MainForm.FiltersListView.RebuildMenu()
             End If
         End Using
     End Sub
@@ -4739,8 +4824,8 @@ Public Class MainForm
         ret.Add("File|Save Project As...", NameOf(SaveProjectAs))
         ret.Add("File|Save Project As Template...", NameOf(SaveProjectAsTemplate))
         ret.Add("File|-")
-        ret.Add("File|Project Templates", NameOf(DynamicMenuItem), {DynamicMenuItemID.TemplateProjects})
-        ret.Add("File|Recent Projects", NameOf(DynamicMenuItem), {DynamicMenuItemID.RecentProjects})
+        ret.Add("File|Project Templates", NameOf(g.DefaultCommands.DynamicMenuItem), {DynamicMenuItemID.TemplateProjects})
+        ret.Add("File|Recent Projects", NameOf(g.DefaultCommands.DynamicMenuItem), {DynamicMenuItemID.RecentProjects})
 
         ret.Add("Crop", NameOf(ShowCropDialog), Keys.F4)
         ret.Add("Preview", NameOf(ShowPreview), Keys.F5)
@@ -4763,7 +4848,7 @@ Public Class MainForm
         ret.Add("Tools|Folders|Temp", NameOf(g.DefaultCommands.ExecuteCommandLine), {"""%temp_dir%"""})
         ret.Add("Tools|Folders|Working", NameOf(g.DefaultCommands.ExecuteCommandLine), {"""%working_dir%"""})
 
-        ret.Add("Tools|Scripts", NameOf(DynamicMenuItem), Symbol.Code, {DynamicMenuItemID.Scripts})
+        ret.Add("Tools|Scripts", NameOf(g.DefaultCommands.DynamicMenuItem), Symbol.Code, {DynamicMenuItemID.Scripts})
 
         ret.Add("Tools|Advanced", Symbol.More)
 
@@ -4784,6 +4869,7 @@ Public Class MainForm
             ret.Add("Tools|Advanced|PowerShell Terminal", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.Control Or Keys.T, Symbol.fa_terminal, {"powershell.exe -nologo -executionpolicy unrestricted", False, False, False, "%working_dir%"})
         End If
 
+        ret.Add("Tools|Advanced|Ingest HDR", NameOf(g.DefaultCommands.SaveMKVHDR))
         ret.Add("Tools|Edit Menu...", NameOf(ShowMainMenuEditor))
         ret.Add("Tools|Settings...", NameOf(ShowSettingsDialog), Symbol.Settings, {""})
 
@@ -4793,10 +4879,8 @@ Public Class MainForm
         ret.Add("Apps|Media Info|mkvinfo", NameOf(g.DefaultCommands.ShowMkvInfo))
         ret.Add("Apps|Media Info|MediaInfo File", NameOf(g.DefaultCommands.ShowMediaInfo))
         ret.Add("Apps|Media Info|MediaInfo Folder", NameOf(g.DefaultCommands.ShowMediaInfoFolderViewDialog))
-        ret.Add("Apps|Media Info|Ingest HDR", NameOf(g.DefaultCommands.SaveMKVHDR))
         ret.Add("Apps|Players|mpv.net", NameOf(g.DefaultCommands.StartTool), {"mpv.net"})
-        ret.Add("Apps|Players|MPC-BE", NameOf(g.DefaultCommands.StartTool), {"MPC-BE"})
-        ret.Add("Apps|Players|MPC-HC", NameOf(g.DefaultCommands.StartTool), {"MPC-HC"})
+        ret.Add("Apps|Players|MPC", NameOf(g.DefaultCommands.StartTool), {"MPC"})
         ret.Add("Apps|Indexing|D2V Witch", NameOf(g.DefaultCommands.StartTool), {"D2V Witch"})
         ret.Add("Apps|Indexing|DGIndex", NameOf(g.DefaultCommands.StartTool), {"DGIndex"})
         ret.Add("Apps|Thumbnails|MTN Thumbnailer", NameOf(g.DefaultCommands.SaveMTN))
@@ -4810,7 +4894,7 @@ Public Class MainForm
 
         ret.Add("Help|Documentation", NameOf(g.DefaultCommands.ExecuteCommandLine), Keys.F1, Symbol.Help, {"http://staxrip.readthedocs.io"})
         ret.Add("Help|Website", NameOf(g.DefaultCommands.ExecuteCommandLine), Symbol.Globe, {"https://github.com/staxrip/staxrip"})
-        ret.Add("Help|Apps", NameOf(DynamicMenuItem), {DynamicMenuItemID.HelpApplications})
+        ret.Add("Help|Apps", NameOf(g.DefaultCommands.DynamicMenuItem), {DynamicMenuItemID.HelpApplications})
         ret.Add("Help|Check for Updates", NameOf(g.DefaultCommands.CheckForUpdate))
         ret.Add("Help|-")
         ret.Add("Help|Info...", NameOf(g.DefaultCommands.OpenHelpTopic), Symbol.Info, {"info"})
@@ -5744,7 +5828,7 @@ Public Class MainForm
     End Sub
 
     Sub AviSynthListView_DoubleClick() Handles FiltersListView.DoubleClick
-        FiltersListView.ShowEditor()
+        FiltersListView.ShowCodeEditor()
     End Sub
 
     Sub gbFilters_MenuClick() Handles lgbFilters.LinkClick
@@ -5787,28 +5871,28 @@ Public Class MainForm
     Sub blSourceParText_Click(sender As Object, e As EventArgs) Handles blSourceParText.Click
         Dim menu = TextCustomMenu.GetMenu(s.ParMenu, blSourceParText, components, AddressOf SourceParMenuClick)
         menu.Add("-")
-        menu.Items.Add(New ActionMenuItem("Edit Menu...", Sub() s.ParMenu = TextCustomMenu.EditMenu(s.ParMenu, ApplicationSettings.GetParMenu, Me)))
+        menu.Items.Add(New MenuItemEx("Edit Menu...", Sub() s.ParMenu = TextCustomMenu.EditMenu(s.ParMenu, ApplicationSettings.GetParMenu, Me)))
         menu.Show(blSourceParText, 0, blSourceParText.Height)
     End Sub
 
     Sub blSourceDarText_Click(sender As Object, e As EventArgs) Handles blSourceDarText.Click
         Dim menu = TextCustomMenu.GetMenu(s.DarMenu, blSourceDarText, components, AddressOf SourceDarMenuClick)
         menu.Add("-")
-        menu.Items.Add(New ActionMenuItem("Edit Menu...", Sub() s.DarMenu = TextCustomMenu.EditMenu(s.DarMenu, ApplicationSettings.GetDarMenu, Me)))
+        menu.Items.Add(New MenuItemEx("Edit Menu...", Sub() s.DarMenu = TextCustomMenu.EditMenu(s.DarMenu, ApplicationSettings.GetDarMenu, Me)))
         menu.Show(blSourceDarText, 0, blSourceDarText.Height)
     End Sub
 
     Sub blTargetDarText_Click(sender As Object, e As EventArgs) Handles blTargetDarText.Click
         Dim menu = TextCustomMenu.GetMenu(s.DarMenu, blTargetDarText, components, AddressOf TargetDarMenuClick)
         menu.Add("-")
-        menu.Items.Add(New ActionMenuItem("Edit Menu...", Sub() s.DarMenu = TextCustomMenu.EditMenu(s.DarMenu, ApplicationSettings.GetDarMenu, Me)))
+        menu.Items.Add(New MenuItemEx("Edit Menu...", Sub() s.DarMenu = TextCustomMenu.EditMenu(s.DarMenu, ApplicationSettings.GetDarMenu, Me)))
         menu.Show(blTargetDarText, 0, blTargetDarText.Height)
     End Sub
 
     Sub blTargetParText_Click(sender As Object, e As EventArgs) Handles blTargetParText.Click
         Dim menu = TextCustomMenu.GetMenu(s.ParMenu, blTargetParText, components, AddressOf TargetParMenuClick)
         menu.Add("-")
-        menu.Items.Add(New ActionMenuItem("Edit Menu...", Sub() s.ParMenu = TextCustomMenu.EditMenu(s.ParMenu, ApplicationSettings.GetParMenu, Me)))
+        menu.Items.Add(New MenuItemEx("Edit Menu...", Sub() s.ParMenu = TextCustomMenu.EditMenu(s.ParMenu, ApplicationSettings.GetParMenu, Me)))
         menu.Show(blTargetParText, 0, blTargetParText.Height)
     End Sub
 
@@ -6168,6 +6252,17 @@ Public Class MainForm
     Protected Overrides Sub OnActivated(e As EventArgs)
         MyBase.OnActivated(e)
         UpdateNextButton()
+
+        If Not FrameServerHelp.IsAviSynthPortable AndAlso FrameServerHelp.GetAviSynthInstallPath = "" Then
+            MsgError($"AviSynth installation not found,{BR}using portable mode instead.")
+            s.AviSynthMode = FrameServerMode.Portable
+        End If
+
+        If Not FrameServerHelp.IsVapourSynthPortable AndAlso FrameServerHelp.GetVapourSynthInstallPath = "" Then
+            MsgError($"VapourSynth installation not found,{BR}using portable mode instead.")
+            s.VapourSynthMode = FrameServerMode.Portable
+        End If
+
         ProcController.LastActivation = Environment.TickCount
 
         BeginInvoke(New Action(Sub()
@@ -6188,7 +6283,6 @@ Public Class MainForm
         StaxRip.StaxRipUpdate.ShowUpdateQuestion()
         StaxRip.StaxRipUpdate.CheckForUpdate(False, s.CheckForUpdatesBeta, Environment.Is64BitProcess)
         g.RunTask(AddressOf g.LoadPowerShellScripts)
-        g.RunTask(AddressOf FrameServerHelp.VerifyAviSynthLinks)
     End Sub
 
     Protected Overrides Sub OnFormClosing(args As FormClosingEventArgs)
